@@ -1,0 +1,7 @@
+# Only the settings we want to control from code. Everything else stays as set in the Supabase dashboard.
+project_id = "aik-cheong-expense-claims"
+
+[auth]
+# Staff cannot create their own accounts. The super admin creates them inside the app.
+enable_signup = false
+minimum_password_length = 8

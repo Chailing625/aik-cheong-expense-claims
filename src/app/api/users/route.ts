@@ -1,0 +1,84 @@
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabase-admin";
+
+const ROLES = ["admin", "hod"] as const;
+type AppRole = (typeof ROLES)[number];
+
+/** Only a signed-in, active super admin may use these endpoints. */
+async function requireSuperAdmin(request: Request) {
+  const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  if (!token) return null;
+  const { data } = await supabaseAdmin.auth.getUser(token);
+  if (!data.user) return null;
+  const { data: profile } = await supabaseAdmin.from("profiles").select("role, active").eq("id", data.user.id).maybeSingle();
+  return profile?.role === "superadmin" && profile.active ? data.user : null;
+}
+
+const bad = (message: string, status = 400) => NextResponse.json({ error: message }, { status });
+
+export async function GET(request: Request) {
+  if (!(await requireSuperAdmin(request))) return bad("Not allowed", 403);
+  const { data, error } = await supabaseAdmin.from("profiles").select("id, email, full_name, role, active, created_at").order("created_at");
+  if (error) return bad(error.message, 500);
+  return NextResponse.json({ users: data });
+}
+
+/** Create a staff account. Body: { email, fullName, role, password } */
+export async function POST(request: Request) {
+  if (!(await requireSuperAdmin(request))) return bad("Not allowed", 403);
+  const body = (await request.json().catch(() => null)) as { email?: string; fullName?: string; role?: string; password?: string } | null;
+  const email = body?.email?.trim().toLowerCase() ?? "";
+  const fullName = body?.fullName?.trim() ?? "";
+  const password = body?.password ?? "";
+  const role = body?.role as AppRole;
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return bad("Enter a valid email address.");
+  if (!fullName) return bad("Enter the person's name.");
+  if (!ROLES.includes(role)) return bad("Choose Admin or HOD.");
+  if (password.length < 8) return bad("The password must be at least 8 characters.");
+
+  const created = await supabaseAdmin.auth.admin.createUser({
+    email, password, email_confirm: true,
+    user_metadata: { full_name: fullName, must_change_password: true },
+  });
+  if (created.error || !created.data.user) return bad(created.error?.message ?? "Could not create the account.", 400);
+
+  const { error } = await supabaseAdmin.from("profiles").update({ role, full_name: fullName, active: true }).eq("id", created.data.user.id);
+  if (error) return bad(error.message, 500);
+  return NextResponse.json({ id: created.data.user.id });
+}
+
+/** Change an account. Body: { id, role?, active?, password?, fullName? } */
+export async function PATCH(request: Request) {
+  const me = await requireSuperAdmin(request);
+  if (!me) return bad("Not allowed", 403);
+  const body = (await request.json().catch(() => null)) as { id?: string; role?: string; active?: boolean; password?: string; fullName?: string } | null;
+  if (!body?.id) return bad("Missing account.");
+  const { data: target } = await supabaseAdmin.from("profiles").select("role").eq("id", body.id).maybeSingle();
+  if (!target) return bad("Account not found.", 404);
+  if (target.role === "superadmin") return bad("The super admin account cannot be changed here.", 403);
+
+  const update: { role?: string; active?: boolean; full_name?: string } = {};
+  if (body.role !== undefined) {
+    if (!ROLES.includes(body.role as AppRole)) return bad("Choose Admin or HOD.");
+    update.role = body.role;
+  }
+  if (body.fullName !== undefined) {
+    if (!body.fullName.trim()) return bad("Enter the person's name.");
+    update.full_name = body.fullName.trim();
+  }
+  if (body.active !== undefined) {
+    update.active = body.active;
+    const r = await supabaseAdmin.auth.admin.updateUserById(body.id, { ban_duration: body.active ? "none" : "876000h" });
+    if (r.error) return bad(r.error.message, 500);
+  }
+  if (body.password !== undefined) {
+    if (body.password.length < 8) return bad("The password must be at least 8 characters.");
+    const r = await supabaseAdmin.auth.admin.updateUserById(body.id, { password: body.password, user_metadata: { must_change_password: true } });
+    if (r.error) return bad(r.error.message, 500);
+  }
+  if (Object.keys(update).length) {
+    const { error } = await supabaseAdmin.from("profiles").update(update).eq("id", body.id);
+    if (error) return bad(error.message, 500);
+  }
+  return NextResponse.json({ ok: true });
+}

@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# keep real documents and local secrets out of Git
+!.env.example
+/Reference/
+*.pdf
+supabase/.temp/
