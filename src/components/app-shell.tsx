@@ -24,7 +24,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const items = NAV.filter(
-    (n) => n.roles.includes(user.role) && (!n.superOnly || user.isSuper) && (n.href !== "/claims/new" || user.canEdit)
+    (n) =>
+      (n.roles.includes(user.role) || (n.href === "/approvals" && user.isSuper)) &&
+      (!n.superOnly || user.isSuper) &&
+      (n.href !== "/claims/new" || user.canEdit)
   );
   const active = (href: string) =>
     href === "/claims"

@@ -238,6 +238,7 @@ export type Database = {
           full_name: string
           id: string
           role: string | null
+          username: string | null
         }
         Insert: {
           active?: boolean
@@ -249,6 +250,7 @@ export type Database = {
           full_name?: string
           id: string
           role?: string | null
+          username?: string | null
         }
         Update: {
           active?: boolean
@@ -260,6 +262,7 @@ export type Database = {
           full_name?: string
           id?: string
           role?: string | null
+          username?: string | null
         }
         Relationships: []
       }
@@ -304,6 +307,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_decide: { Args: never; Returns: boolean }
       current_app_role: { Args: never; Returns: string }
       decide_claims: {
         Args: { p_approve: boolean; p_comment?: string; p_ids: string[] }

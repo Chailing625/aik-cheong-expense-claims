@@ -13,7 +13,7 @@ function Centered({ children }: { children: ReactNode }) {
 
 /** Shows the sign-in page, a "waiting for access" notice, or the app, depending on who is signed in. */
 export function AuthGate({ children }: { children: ReactNode }) {
-  const { loading, session, user, email, mustChangePassword, signOut } = useAuth();
+  const { loading, session, user, username, mustChangePassword, signOut } = useAuth();
   const path = usePathname();
   const router = useRouter();
   const onLogin = path === "/login";
@@ -30,7 +30,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
         <div className="max-w-sm space-y-3">
           <h1 className="text-xl font-bold text-gray-900">No access</h1>
           <p className="text-sm">
-            You are signed in as <b>{email}</b>, but this account is switched off or has no role. Please contact the Super Admin.
+            You are signed in as <b>{username}</b>, but this account is switched off or has no role. Please contact the Super Admin.
           </p>
           <Button variant="outline" onClick={() => void signOut()}>Sign out</Button>
         </div>

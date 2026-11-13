@@ -104,7 +104,7 @@ function ClaimDetail() {
               <Trash2 className="size-4" /> Delete
             </Button>
           )}
-          {user.role === "hod" && claim.status === "pending" && (
+          {(user.role === "hod" || user.isSuper) && claim.status === "pending" && (
             <>
               <Button variant="outline" className="gap-2 border-red-300 text-red-600 hover:bg-red-50" onClick={() => setDialog("reject")}><X className="size-4" /> Reject</Button>
               <Button className="gap-2" onClick={() => setDialog("approve")}><Check className="size-4" /> Approve</Button>

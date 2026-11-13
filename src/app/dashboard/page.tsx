@@ -28,7 +28,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {user.role === "hod" && by("pending").length > 0 && (
+      {(user.role === "hod" || user.isSuper) && by("pending").length > 0 && (
         <Link href="/approvals" className="mb-5 flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50 p-4 hover:bg-blue-100">
           <div className="flex items-center gap-3">
             <Clock className="size-5 text-primary" />

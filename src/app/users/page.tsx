@@ -7,7 +7,7 @@ import { useUser } from "@/lib/user-context";
 
 interface Account {
   id: string;
-  email: string | null;
+  username: string | null;
   full_name: string;
   role: "superadmin" | "admin" | "hod" | null;
   active: boolean;
@@ -49,10 +49,10 @@ export default function UsersPage() {
   const [list, setList] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [form, setForm] = useState<null | { fullName: string; email: string; role: "admin" | "hod"; password: string }>(null);
+  const [form, setForm] = useState<null | { fullName: string; id: string; role: "admin" | "hod"; password: string }>(null);
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [reveal, setReveal] = useState<null | { title: string; email: string; password: string }>(null);
+  const [reveal, setReveal] = useState<null | { title: string; id: string; password: string }>(null);
   const [copied, setCopied] = useState(false);
 
   const load = useCallback(async () => {
@@ -85,7 +85,7 @@ export default function UsersPage() {
     setFormError("");
     try {
       await call("POST", form);
-      setReveal({ title: "Account created", email: form.email.trim().toLowerCase(), password: form.password });
+      setReveal({ title: "Account created", id: form.id.trim().toLowerCase(), password: form.password });
       setForm(null);
       await load();
     } catch (e) {
@@ -94,7 +94,7 @@ export default function UsersPage() {
     setBusy(false);
   };
 
-  const patch = async (body: Record<string, unknown>, reveal_?: { email: string; password: string }) => {
+  const patch = async (body: Record<string, unknown>, reveal_?: { id: string; password: string }) => {
     setError("");
     try {
       await call("PATCH", body);
@@ -120,7 +120,7 @@ export default function UsersPage() {
           <h1 className="text-2xl font-bold text-gray-900">Staff Accounts</h1>
           <p className="mt-1 text-sm text-gray-500">Staff cannot sign themselves up. Create their account here, then tick what each person may do with claims. Edit and Delete only work on claims not yet approved. Approving stays with the HOD.</p>
         </div>
-        <Button className="gap-2" onClick={() => { setForm({ fullName: "", email: "", role: "admin", password: makePassword() }); setFormError(""); }}>
+        <Button className="gap-2" onClick={() => { setForm({ fullName: "", id: "", role: "admin", password: makePassword() }); setFormError(""); }}>
           <Plus className="size-4" /> Add staff account
         </Button>
       </div>
@@ -130,7 +130,7 @@ export default function UsersPage() {
       <div className="overflow-x-auto rounded-xl border bg-white">
         <table className="w-full min-w-[900px] text-sm">
           <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
-            <tr><th className="px-4 py-3">Name</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Role</th>{PERMS.map((p) => <th key={p.key} className="px-3 py-3 text-center">{p.label}</th>)}<th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th></tr>
+            <tr><th className="px-4 py-3">Name</th><th className="px-4 py-3">ID</th><th className="px-4 py-3">Role</th>{PERMS.map((p) => <th key={p.key} className="px-3 py-3 text-center">{p.label}</th>)}<th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th></tr>
           </thead>
           <tbody className="divide-y">
             {list.map((a) => {
@@ -138,7 +138,7 @@ export default function UsersPage() {
               return (
                 <tr key={a.id} className={a.active ? "" : "bg-gray-50 text-gray-400"}>
                   <td className="px-4 py-3 font-medium">{a.full_name || "—"}</td>
-                  <td className="px-4 py-3">{a.email}</td>
+                  <td className="px-4 py-3 font-mono text-[13px]">{a.username}</td>
                   <td className="px-4 py-3">
                     {isSuper ? (
                       <span className="font-medium">Super Admin</span>
@@ -153,7 +153,7 @@ export default function UsersPage() {
                     <td key={p.key} className="px-3 py-3 text-center">
                       <input
                         type="checkbox"
-                        aria-label={`${p.label} claims: ${a.full_name || a.email}`}
+                        aria-label={`${p.label} claims: ${a.full_name || a.username}`}
                         className="size-4 accent-[#2563eb]"
                         checked={isSuper ? true : a[p.key]}
                         disabled={isSuper}
@@ -167,10 +167,10 @@ export default function UsersPage() {
                   <td className="px-4 py-3">
                     {!isSuper && (
                       <div className="flex justify-end gap-1.5">
-                        <Button size="sm" variant="outline" className="gap-1" onClick={() => { const pw = makePassword(); if (confirm(`Set a new temporary password for ${a.full_name || a.email}? They must change it at next sign-in.`)) void patch({ id: a.id, password: pw }, { email: a.email ?? "", password: pw }); }}>
+                        <Button size="sm" variant="outline" className="gap-1" onClick={() => { const pw = makePassword(); if (confirm(`Set a new temporary password for ${a.full_name || a.username}? They must change it at next sign-in.`)) void patch({ id: a.id, password: pw }, { id: a.username ?? "", password: pw }); }}>
                           <KeyRound className="size-3.5" /> New password
                         </Button>
-                        <Button size="sm" variant="outline" className={`gap-1 ${a.active ? "border-red-300 text-red-600 hover:bg-red-50" : ""}`} onClick={() => { if (!a.active || confirm(`Switch off ${a.full_name || a.email}? They will not be able to sign in.`)) void patch({ id: a.id, active: !a.active }); }}>
+                        <Button size="sm" variant="outline" className={`gap-1 ${a.active ? "border-red-300 text-red-600 hover:bg-red-50" : ""}`} onClick={() => { if (!a.active || confirm(`Switch off ${a.full_name || a.username}? They will not be able to sign in.`)) void patch({ id: a.id, active: !a.active }); }}>
                           {a.active ? <><UserX className="size-3.5" /> Switch off</> : <><UserCheck className="size-3.5" /> Switch on</>}
                         </Button>
                       </div>
@@ -194,8 +194,9 @@ export default function UsersPage() {
                 <input className={inp} value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Email (they sign in with this)</label>
-                <input className={inp} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                <label className="mb-1 block text-sm font-medium">ID (they sign in with this)</label>
+                <input className={inp} type="text" autoCapitalize="none" spellCheck={false} placeholder="e.g. mary.tan" value={form.id} onChange={(e) => setForm({ ...form, id: e.target.value.toLowerCase().replace(/s/g, "") })} />
+                <p className="mt-1 text-xs text-gray-500">3 to 30 letters, numbers, dots, dashes or underscores. No spaces.</p>
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">Role</label>
@@ -228,11 +229,11 @@ export default function UsersPage() {
             <h3 className="text-lg font-bold">{reveal.title}</h3>
             <p className="mt-1 text-sm text-gray-600">Give these to the staff member. The password is shown only now, so copy it before closing.</p>
             <div className="mt-4 space-y-2 rounded-lg bg-gray-50 p-3 text-sm">
-              <div>Email: <b>{reveal.email}</b></div>
+              <div>ID: <b>{reveal.id}</b></div>
               <div>Temporary password: <b className="font-mono">{reveal.password}</b></div>
             </div>
             <div className="mt-5 flex gap-2">
-              <Button variant="outline" className="flex-1 gap-2" onClick={() => void copy(`Email: ${reveal.email}\nPassword: ${reveal.password}`)}>
+              <Button variant="outline" className="flex-1 gap-2" onClick={() => void copy(`ID: ${reveal.id}\nPassword: ${reveal.password}`)}>
                 {copied ? <><Check className="size-4" /> Copied</> : <><Copy className="size-4" /> Copy</>}
               </Button>
               <Button className="flex-1" onClick={() => setReveal(null)}>Done</Button>

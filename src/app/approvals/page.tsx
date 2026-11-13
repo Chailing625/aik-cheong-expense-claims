@@ -14,11 +14,11 @@ export default function Approvals() {
   const [dialog, setDialog] = useState<null | { type: "approve" | "reject" | "bulk"; id?: string }>(null);
   const [comment, setComment] = useState("");
 
-  if (user.role !== "hod")
+  if (user.role !== "hod" && !user.isSuper)
     return (
       <div className="mx-auto mt-16 max-w-sm text-center text-gray-600">
         <Lock className="mx-auto mb-3 size-10 text-gray-400" />
-        <p className="font-medium">Approvals are for the HOD only.</p>
+        <p className="font-medium">Approvals are for the HOD and Super Admin only.</p>
       </div>
     );
 

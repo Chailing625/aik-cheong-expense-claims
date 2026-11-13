@@ -11,7 +11,7 @@ const inp = "w-full rounded-lg border bg-white px-3 py-2.5 text-base outline-non
 export default function LoginPage() {
   const router = useRouter();
   const { session } = useAuth();
-  const [email, setEmail] = useState("");
+  const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -24,8 +24,15 @@ export default function LoginPage() {
     e.preventDefault();
     setBusy(true);
     setMsg(null);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setMsg({ ok: false, text: error.message.toLowerCase().includes("banned") ? "This account has been switched off. Please contact the Super Admin." : "Wrong email or password." });
+    try {
+      const res = await fetch("/api/signin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: userId, password }) });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error ?? "Wrong ID or password.");
+      const { error } = await supabase.auth.setSession({ access_token: json.access_token, refresh_token: json.refresh_token });
+      if (error) throw error;
+    } catch (e) {
+      setMsg({ ok: false, text: (e as Error).message });
+    }
     setBusy(false);
   };
 
@@ -42,8 +49,8 @@ export default function LoginPage() {
         </div>
         <h1 className="text-xl font-bold text-gray-900">Sign in</h1>
         <div>
-          <label className="mb-1 block text-sm font-medium">Email</label>
-          <input className={inp} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <label className="mb-1 block text-sm font-medium">ID</label>
+          <input className={inp} type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} value={userId} onChange={(e) => setUserId(e.target.value)} required />
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium">Password</label>

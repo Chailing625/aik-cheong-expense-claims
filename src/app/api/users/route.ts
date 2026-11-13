@@ -28,20 +28,23 @@ function cleanPerms(p: { can_view?: unknown; can_edit?: unknown; can_delete?: un
 
 export async function GET(request: Request) {
   if (!(await requireSuperAdmin(request))) return bad("Not allowed", 403);
-  const { data, error } = await supabaseAdmin.from("profiles").select("id, email, full_name, role, active, created_at, can_view, can_edit, can_delete").order("created_at");
+  const { data, error } = await supabaseAdmin.from("profiles").select("id, username, full_name, role, active, created_at, can_view, can_edit, can_delete").order("created_at");
   if (error) return bad(error.message, 500);
   return NextResponse.json({ users: data });
 }
 
-/** Create a staff account. Body: { email, fullName, role, password } */
+/** Create a staff account. Body: { id, fullName, role, password }. The ID is what they sign in with. */
 export async function POST(request: Request) {
   if (!(await requireSuperAdmin(request))) return bad("Not allowed", 403);
-  const body = (await request.json().catch(() => null)) as { email?: string; fullName?: string; role?: string; password?: string; can_view?: boolean; can_edit?: boolean; can_delete?: boolean } | null;
-  const email = body?.email?.trim().toLowerCase() ?? "";
+  const body = (await request.json().catch(() => null)) as { id?: string; fullName?: string; role?: string; password?: string; can_view?: boolean; can_edit?: boolean; can_delete?: boolean } | null;
+  const username = body?.id?.trim().toLowerCase() ?? "";
+  const email = `${username}@aikcheong.my`; // internal only; staff never type it
   const fullName = body?.fullName?.trim() ?? "";
   const password = body?.password ?? "";
   const role = body?.role as AppRole;
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return bad("Enter a valid email address.");
+  if (!/^[a-z0-9._-]{3,30}$/.test(username)) return bad("The ID must be 3 to 30 letters, numbers, dots, dashes or underscores, with no spaces.");
+  const taken = await supabaseAdmin.from("profiles").select("id").eq("username", username).maybeSingle();
+  if (taken.data) return bad("That ID is already used. Choose another one.");
   if (!fullName) return bad("Enter the person's name.");
   if (!ROLES.includes(role)) return bad("Choose Admin or HOD.");
   if (password.length < 8) return bad("The password must be at least 8 characters.");
@@ -53,7 +56,7 @@ export async function POST(request: Request) {
   if (created.error || !created.data.user) return bad(created.error?.message ?? "Could not create the account.", 400);
 
   const perms = { can_view: true, can_edit: role === "admin", can_delete: false, ...cleanPerms(body ?? {}) };
-  const { error } = await supabaseAdmin.from("profiles").update({ role, full_name: fullName, active: true, ...perms }).eq("id", created.data.user.id);
+  const { error } = await supabaseAdmin.from("profiles").update({ role, full_name: fullName, active: true, username, ...perms }).eq("id", created.data.user.id);
   if (error) return bad(error.message, 500);
   return NextResponse.json({ id: created.data.user.id });
 }
