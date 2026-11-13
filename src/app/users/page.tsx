@@ -11,7 +11,16 @@ interface Account {
   full_name: string;
   role: "superadmin" | "admin" | "hod" | null;
   active: boolean;
+  can_view: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
 }
+
+const PERMS = [
+  { key: "can_view", label: "View" },
+  { key: "can_edit", label: "Edit" },
+  { key: "can_delete", label: "Delete" },
+] as const;
 
 const ROLE_NAME = { superadmin: "Super Admin", admin: "Admin (key in claims)", hod: "HOD (approves)" } as const;
 const inp = "w-full rounded-lg border bg-white px-3 py-2.5 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm";
@@ -109,7 +118,7 @@ export default function UsersPage() {
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Staff Accounts</h1>
-          <p className="mt-1 text-sm text-gray-500">Staff cannot sign themselves up. Create their account here and give them the email and temporary password.</p>
+          <p className="mt-1 text-sm text-gray-500">Staff cannot sign themselves up. Create their account here, then tick what each person may do with claims. Edit and Delete only work on claims not yet approved. Approving stays with the HOD.</p>
         </div>
         <Button className="gap-2" onClick={() => { setForm({ fullName: "", email: "", role: "admin", password: makePassword() }); setFormError(""); }}>
           <Plus className="size-4" /> Add staff account
@@ -119,9 +128,9 @@ export default function UsersPage() {
       {error && <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
 
       <div className="overflow-x-auto rounded-xl border bg-white">
-        <table className="w-full min-w-[760px] text-sm">
+        <table className="w-full min-w-[900px] text-sm">
           <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
-            <tr><th className="px-4 py-3">Name</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th></tr>
+            <tr><th className="px-4 py-3">Name</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Role</th>{PERMS.map((p) => <th key={p.key} className="px-3 py-3 text-center">{p.label}</th>)}<th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th></tr>
           </thead>
           <tbody className="divide-y">
             {list.map((a) => {
@@ -140,6 +149,18 @@ export default function UsersPage() {
                       </select>
                     )}
                   </td>
+                  {PERMS.map((p) => (
+                    <td key={p.key} className="px-3 py-3 text-center">
+                      <input
+                        type="checkbox"
+                        aria-label={`${p.label} claims: ${a.full_name || a.email}`}
+                        className="size-4 accent-[#2563eb]"
+                        checked={isSuper ? true : a[p.key]}
+                        disabled={isSuper}
+                        onChange={(e) => void patch({ id: a.id, [p.key]: e.target.checked })}
+                      />
+                    </td>
+                  ))}
                   <td className="px-4 py-3">
                     <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${a.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-700"}`}>{a.active ? "Active" : "Switched off"}</span>
                   </td>

@@ -12,6 +12,9 @@ export interface User {
   name: string;
   role: Role; // a super admin counts as "admin" everywhere
   isSuper?: boolean;
+  canView: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
 }
 
 

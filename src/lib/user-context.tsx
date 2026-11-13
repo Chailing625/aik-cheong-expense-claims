@@ -21,6 +21,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<Role | null>(null);
   const [isSuper, setIsSuper] = useState(false);
   const [name, setName] = useState("");
+  const [perms, setPerms] = useState({ view: false, edit: false, del: false });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -47,7 +48,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     let alive = true;
     supabase
       .from("profiles")
-      .select("role, full_name, email, active")
+      .select("role, full_name, email, active, can_view, can_edit, can_delete")
       .eq("id", uid)
       .maybeSingle()
       .then(({ data }) => {
@@ -55,6 +56,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
         const r = data?.active === false ? null : data?.role;
         setRole(r === "superadmin" ? "admin" : ((r as Role | null | undefined) ?? null));
         setIsSuper(r === "superadmin");
+        const all = r === "superadmin";
+        setPerms({ view: all || !!data?.can_view, edit: all || !!data?.can_edit, del: all || !!data?.can_delete });
         setName(data?.full_name || data?.email?.split("@")[0] || "User");
         setLoading(false);
       });
@@ -63,7 +66,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     };
   }, [uid]);
 
-  const user: User | null = session && role ? { id: session.user.id, name, role, isSuper } : null;
+  const user: User | null = session && role ? { id: session.user.id, name, role, isSuper, canView: perms.view, canEdit: perms.edit, canDelete: perms.del } : null;
   return (
     <Ctx.Provider value={{ loading, session, user, email: session?.user.email ?? "", mustChangePassword: session?.user.user_metadata?.must_change_password === true, signOut: async () => void (await supabase.auth.signOut()) }}>
       {children}

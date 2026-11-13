@@ -1,8 +1,8 @@
 "use client";
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
-import { ArrowLeft, Check, CheckCircle2, Clock, Download, Paperclip, Pencil, X, XCircle } from "lucide-react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, Check, CheckCircle2, Clock, Download, Paperclip, Pencil, Trash2, X, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ReceiptGallery } from "@/components/receipt-gallery";
 import { getReceipt, blobToDataUrl } from "@/lib/receipts";
@@ -24,7 +24,8 @@ function ClaimDetail() {
   const { id } = useParams<{ id: string }>();
   const autoDownload = useSearchParams().get("download") === "1";
   const { user } = useUser();
-  const { claims, salespeople, decide } = useStore();
+  const { claims, salespeople, decide, deleteClaim } = useStore();
+  const router = useRouter();
   const claim = claims.find((c) => c.id === id);
   const exportRef = useRef<HTMLDivElement>(null);
   const [dialog, setDialog] = useState<null | "approve" | "reject">(null);
@@ -86,10 +87,22 @@ function ClaimDetail() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {user.role === "admin" && (claim.status === "pending" || claim.status === "rejected") && (
+          {user.canEdit && (claim.status === "pending" || claim.status === "rejected") && (
             <Link href={`/claims/new?edit=${claim.id}`}>
               <Button variant="outline" className="gap-2"><Pencil className="size-4" /> Edit</Button>
             </Link>
+          )}
+          {user.canDelete && claim.status !== "approved" && (
+            <Button
+              variant="outline"
+              className="gap-2 border-red-300 text-red-600 hover:bg-red-50"
+              onClick={() => {
+                if (confirm(`Delete the claim for ${sp?.name ?? "this person"} (${claim.period})? It will be hidden from all lists.`))
+                  deleteClaim(claim.id).then(() => router.push("/claims")).catch((e: Error) => alert(e.message));
+              }}
+            >
+              <Trash2 className="size-4" /> Delete
+            </Button>
           )}
           {user.role === "hod" && claim.status === "pending" && (
             <>

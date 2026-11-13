@@ -66,11 +66,11 @@ function ClaimEditor() {
   const totals = claimTotals(numericRows);
   const sp = salespeople.find((s) => s.id === spId);
 
-  if (user.role !== "admin")
+  if (!user.canEdit)
     return (
       <div className="mx-auto mt-16 max-w-sm text-center text-gray-600">
         <Lock className="mx-auto mb-3 size-10 text-gray-400" />
-        <p className="font-medium">Only the Admin keys in claims.</p>
+        <p className="font-medium">You do not have permission to key in or edit claims.</p>
       </div>
     );
 

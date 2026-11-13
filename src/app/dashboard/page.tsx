@@ -23,7 +23,7 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-gray-900">{user.role === "admin" ? "Hello, Admin 👋" : "Hello, HOD 👋"}</h1>
           <p className="mt-1 text-sm text-gray-500">{formatDate(TODAY)} · Salesman expense claims</p>
         </div>
-        {user.role === "admin" && (
+        {user.canEdit && (
           <Link href="/claims/new"><Button className="gap-2"><FilePlus2 className="size-4" /> New claim</Button></Link>
         )}
       </div>

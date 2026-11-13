@@ -167,6 +167,8 @@ export type Database = {
           checked_by_date: string | null
           checked_by_name: string | null
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           half: number
           id: string
           notes: string
@@ -183,6 +185,8 @@ export type Database = {
           checked_by_date?: string | null
           checked_by_name?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           half: number
           id?: string
           notes?: string
@@ -199,6 +203,8 @@ export type Database = {
           checked_by_date?: string | null
           checked_by_name?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           half?: number
           id?: string
           notes?: string
@@ -224,6 +230,9 @@ export type Database = {
       profiles: {
         Row: {
           active: boolean
+          can_delete: boolean
+          can_edit: boolean
+          can_view: boolean
           created_at: string
           email: string | null
           full_name: string
@@ -232,6 +241,9 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          can_delete?: boolean
+          can_edit?: boolean
+          can_view?: boolean
           created_at?: string
           email?: string | null
           full_name?: string
@@ -240,6 +252,9 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          can_delete?: boolean
+          can_edit?: boolean
+          can_view?: boolean
           created_at?: string
           email?: string | null
           full_name?: string
@@ -294,6 +309,8 @@ export type Database = {
         Args: { p_approve: boolean; p_comment?: string; p_ids: string[] }
         Returns: undefined
       }
+      delete_claim: { Args: { p_id: string }; Returns: undefined }
+      has_perm: { Args: { p_perm: string }; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
       malaysia_today: { Args: never; Returns: string }
     }

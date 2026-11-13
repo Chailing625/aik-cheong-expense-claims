@@ -11,7 +11,7 @@ import { RoastStrip } from "@/components/roast-strip";
 
 const NAV: { href: string; label: string; icon: typeof Receipt; roles: Role[]; superOnly?: boolean }[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "hod"] },
-  { href: "/claims/new", label: "New Claim", icon: FilePlus2, roles: ["admin"] },
+  { href: "/claims/new", label: "New Claim", icon: FilePlus2, roles: ["admin", "hod"] },
   { href: "/claims", label: "Claims", icon: Receipt, roles: ["admin", "hod"] },
   { href: "/approvals", label: "Approvals", icon: CheckSquare, roles: ["hod"] },
   { href: "/salespeople", label: "Sales People", icon: UserRound, roles: ["admin"] },
@@ -23,7 +23,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { error } = useStore();
   const path = usePathname();
   const [open, setOpen] = useState(false);
-  const items = NAV.filter((n) => n.roles.includes(user.role) && (!n.superOnly || user.isSuper));
+  const items = NAV.filter(
+    (n) => n.roles.includes(user.role) && (!n.superOnly || user.isSuper) && (n.href !== "/claims/new" || user.canEdit)
+  );
   const active = (href: string) =>
     href === "/claims"
       ? path === "/claims" || (path.startsWith("/claims/") && !path.startsWith("/claims/new"))

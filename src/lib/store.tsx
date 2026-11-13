@@ -22,6 +22,7 @@ interface Store {
   salespeople: Salesperson[];
   saveClaim: (input: ClaimInput, actor: User, id?: string) => Promise<string>;
   decide: (ids: string[], approve: boolean, comment: string) => Promise<void>;
+  deleteClaim: (id: string) => Promise<void>;
   saveSalesperson: (sp: Omit<Salesperson, "id" | "suspended"> & { id?: string }) => Promise<void>;
   toggleSuspend: (id: string) => Promise<void>;
   reload: () => Promise<void>;
@@ -126,6 +127,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     await reload();
   };
 
+  const deleteClaim: Store["deleteClaim"] = async (id) => {
+    fail((await supabase.rpc("delete_claim", { p_id: id })).error);
+    await reload();
+  };
+
   const saveSalesperson: Store["saveSalesperson"] = async (sp) => {
     const row = { name: sp.name, account_name: sp.accountName, position: sp.position, area: sp.area, bank: sp.bank, account_no: sp.accountNo };
     fail(sp.id ? (await supabase.from("salespeople").update(row).eq("id", sp.id)).error : (await supabase.from("salespeople").insert(row)).error);
@@ -140,7 +146,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <Ctx.Provider value={{ loading, error, claims, salespeople, saveClaim, decide, saveSalesperson, toggleSuspend, reload }}>{children}</Ctx.Provider>
+    <Ctx.Provider value={{ loading, error, claims, salespeople, saveClaim, decide, deleteClaim, saveSalesperson, toggleSuspend, reload }}>{children}</Ctx.Provider>
   );
 }
 

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import { Download, Eye, FilePlus2, Pencil, Search } from "lucide-react";
+import { Download, Eye, FilePlus2, Pencil, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { claimTotal, formatDate, getSalesperson, money, STATUS_LABEL, type Status } from "@/lib/data";
@@ -12,7 +12,7 @@ const FILTERS: ("all" | Status)[] = ["all", "pending", "approved", "rejected"];
 
 export default function Claims() {
   const { user } = useUser();
-  const { claims, salespeople } = useStore();
+  const { claims, salespeople, deleteClaim } = useStore();
   const [f, setF] = useState<"all" | Status>("all");
   const [q, setQ] = useState("");
 
@@ -28,7 +28,7 @@ export default function Claims() {
           <h1 className="text-2xl font-bold text-gray-900">Claims</h1>
           <p className="mt-1 text-sm text-gray-500">All salesman claim forms. Only approved claims can be downloaded.</p>
         </div>
-        {user.role === "admin" && (
+        {user.canEdit && (
           <Link href="/claims/new"><Button className="gap-2"><FilePlus2 className="size-4" /> New claim</Button></Link>
         )}
       </div>
@@ -79,8 +79,13 @@ export default function Claims() {
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1.5">
                       <Link href={`/claims/${c.id}`}><Button size="sm" variant="outline" className="gap-1"><Eye className="size-3.5" /> View</Button></Link>
-                      {user.role === "admin" && (c.status === "pending" || c.status === "rejected") && (
+                      {user.canEdit && (c.status === "pending" || c.status === "rejected") && (
                         <Link href={`/claims/new?edit=${c.id}`}><Button size="sm" variant="outline" className="gap-1"><Pencil className="size-3.5" /> Edit</Button></Link>
+                      )}
+                      {user.canDelete && c.status !== "approved" && (
+                        <Button size="sm" variant="outline" className="gap-1 border-red-300 text-red-600 hover:bg-red-50" onClick={() => { if (confirm(`Delete the claim for ${sp?.name ?? "this person"} (${c.period})? It will be hidden from all lists.`)) deleteClaim(c.id).catch((e: Error) => alert(e.message)); }}>
+                          <Trash2 className="size-3.5" /> Delete
+                        </Button>
                       )}
                       {c.status === "approved" && (
                         <Link href={`/claims/${c.id}?download=1`}><Button size="sm" className="gap-1"><Download className="size-3.5" /> Download</Button></Link>
