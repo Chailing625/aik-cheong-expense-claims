@@ -45,3 +45,6 @@ next-env.d.ts
 /Reference/
 *.pdf
 supabase/.temp/
+
+.vercel
+.env*

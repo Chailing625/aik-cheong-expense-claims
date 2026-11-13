@@ -3,5 +3,7 @@ project_id = "aik-cheong-expense-claims"
 
 [auth]
 # Staff cannot create their own accounts. The super admin creates them inside the app.
+site_url = "https://aik-cheong-expense-claims.vercel.app"
+additional_redirect_urls = ["http://localhost:3000"]
 enable_signup = false
 minimum_password_length = 8
