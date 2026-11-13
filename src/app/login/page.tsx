@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/user-context";
+import { RoastStrip } from "@/components/roast-strip";
 
 const inp = "w-full rounded-lg border bg-white px-3 py-2.5 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm";
 
@@ -30,9 +31,10 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
-      <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-2xl border bg-white p-6 shadow-sm">
+      <form onSubmit={submit} className="w-full max-w-sm space-y-5 rounded-xl border bg-white p-7">
+        <RoastStrip />
         <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white">AC</div>
+          <div className="flex size-10 items-center justify-center rounded-lg bg-roast-dark font-heading text-sm font-bold text-white">AC</div>
           <div className="leading-tight">
             <div className="text-sm font-semibold text-gray-900">Aik Cheong Coffee Roaster Sdn Bhd</div>
             <div className="text-xs text-gray-500">Salesman Expense Claims</div>

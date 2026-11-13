@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { ROLE_LABEL, type Role } from "@/lib/data";
 import { useUser } from "@/lib/user-context";
 import { useStore } from "@/lib/store";
+import { RoastStrip } from "@/components/roast-strip";
 
 const NAV: { href: string; label: string; icon: typeof Receipt; roles: Role[]; superOnly?: boolean }[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "hod"] },
@@ -37,7 +38,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           onClick={() => setOpen(false)}
           className={cn(
             "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-            active(n.href) ? "bg-primary text-white" : "text-gray-700 hover:bg-gray-100"
+            active(n.href) ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
           )}
         >
           <n.icon className="size-4" /> {n.label}
@@ -105,12 +106,15 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 function Brand({ small }: { small?: boolean }) {
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white">AC</div>
-      <div className="leading-tight">
-        <div className="text-sm font-semibold text-gray-900">Aik Cheong Coffee Roaster Sdn Bhd</div>
-        {!small && <div className="text-xs text-gray-500">Salesman Expense Claims</div>}
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-roast-dark font-heading text-sm font-bold text-white">AC</div>
+        <div className="leading-tight">
+          <div className="font-heading text-sm font-semibold text-gray-900">Aik Cheong Coffee Roaster Sdn Bhd</div>
+          {!small && <div className="text-xs text-gray-500">Salesman Expense Claims</div>}
+        </div>
       </div>
+      {!small && <RoastStrip />}
     </div>
   );
 }
