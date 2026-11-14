@@ -9,10 +9,10 @@ import { useUser } from "@/lib/user-context";
 import { useStore } from "@/lib/store";
 import { RoastStrip } from "@/components/roast-strip";
 
-const NAV: { href: string; label: string; icon: typeof Receipt; roles: Role[]; superOnly?: boolean }[] = [
+const NAV: { href: string; label: string; icon: typeof Receipt; roles: Role[]; superOnly?: boolean; child?: boolean }[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "hod"] },
-  { href: "/claims/new", label: "New Claim", icon: FilePlus2, roles: ["admin", "hod", "salesman"] },
   { href: "/claims", label: "Claims", icon: Receipt, roles: ["admin", "hod", "salesman"] },
+  { href: "/claims/new", label: "New Claim", icon: FilePlus2, roles: ["admin", "hod", "salesman"], child: true },
   { href: "/approvals", label: "Approvals", icon: CheckSquare, roles: ["hod"] },
   { href: "/salespeople", label: "Sales People", icon: UserRound, roles: ["admin"] },
   { href: "/users", label: "Staff Accounts", icon: Users, roles: ["admin"], superOnly: true },
@@ -49,6 +49,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           onClick={() => setOpen(false)}
           className={cn(
             "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+            n.child && "ml-6 py-2",
             active(n.href) ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
           )}
         >
