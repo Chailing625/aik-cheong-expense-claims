@@ -48,8 +48,24 @@ function ClaimEditor() {
 
   const [spId, setSpId] = useState(editing?.salespersonId ?? (user.role === "salesman" ? user.salespersonId ?? "" : ""));
   const dp = defaultPeriod(TODAY);
-  const [month, setMonth] = useState(editing?.periodMonth ?? dp.periodMonth);
-  const [half, setHalf] = useState<1 | 2>(editing?.half ?? dp.half);
+  // periods this sales person already has a claim for (the claim being edited does not count)
+  const takenFor = (id: string) => new Set(claims.filter((c) => c.id !== editing?.id && c.salespersonId === id).map((c) => `${c.periodMonth}|${c.half}`));
+  // first period from the given one onwards that has no claim yet
+  const nextFree = (id: string, m: string, h: 1 | 2): { month: string; half: 1 | 2 } => {
+    const t = takenFor(id);
+    let [y, mo] = m.split("-").map(Number);
+    let hh: 1 | 2 = h;
+    for (let i = 0; i < 48 && t.has(`${y}-${String(mo).padStart(2, "0")}|${hh}`); i++) {
+      if (hh === 1) hh = 2;
+      else { hh = 1; mo++; if (mo > 12) { mo = 1; y++; } }
+    }
+    return { month: `${y}-${String(mo).padStart(2, "0")}`, half: hh };
+  };
+  const start = editing ? { month: editing.periodMonth, half: editing.half } : nextFree(spId, dp.periodMonth, dp.half);
+  const [month, setMonth] = useState(start.month);
+  const [half, setHalf] = useState<1 | 2>(start.half);
+  const taken = takenFor(spId);
+  const isTaken = (m: string, h: 1 | 2) => taken.has(`${m}|${h}`);
   const period = periodText(month, half);
   const { from: dayFrom, to: dayTo } = periodDays(month, half);
   const [yy, mm] = month.split("-").map(Number);
@@ -74,7 +90,9 @@ function ClaimEditor() {
       </div>
     );
 
-  const changePeriod = (newMonth: string, newHalf: 1 | 2) => {
+  const changePeriod = (newMonth: string, wantedHalf: 1 | 2) => {
+    // if that half is already claimed, use the other half of the month
+    const newHalf: 1 | 2 = isTaken(newMonth, wantedHalf) && !isTaken(newMonth, wantedHalf === 1 ? 2 : 1) ? (wantedHalf === 1 ? 2 : 1) : wantedHalf;
     const { from, to } = periodDays(newMonth, newHalf);
     // clear anything keyed on days that fall outside the new period
     setRows((l) => l.map((r) => (r.day >= from && r.day <= to ? r : { ...r, location: "", food: "", accom: "", toll: "", parking: "", petrol: "", ent: "", others: "" })));
@@ -145,7 +163,7 @@ function ClaimEditor() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-xs font-medium text-gray-600">Sales person</label>
-                <select value={spId} onChange={(e) => setSpId(e.target.value)} disabled={user.role === "salesman"} className={inp}>
+                <select value={spId} onChange={(e) => { setSpId(e.target.value); if (!editing) { const f = nextFree(e.target.value, month, half); setMonth(f.month); setHalf(f.half); } }} disabled={user.role === "salesman"} className={inp}>
                   <option value="">Select sales person…</option>
                   {active.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
@@ -164,14 +182,14 @@ function ClaimEditor() {
                 <label className="mb-1 block text-xs font-medium text-gray-600">Claim period</label>
                 <div className="grid grid-cols-3 gap-2">
                   <select value={mm} onChange={(e) => changePeriod(`${yy}-${String(e.target.value).padStart(2, "0")}`, half)} className={inp} aria-label="Month">
-                    {MONTH_NAMES.map((n, i) => <option key={n} value={i + 1}>{n[0] + n.slice(1).toLowerCase()}</option>)}
+                    {MONTH_NAMES.map((n, i) => { const m = `${yy}-${String(i + 1).padStart(2, "0")}`; return <option key={n} value={i + 1} disabled={isTaken(m, 1) && isTaken(m, 2)}>{n[0] + n.slice(1).toLowerCase()}{isTaken(m, 1) && isTaken(m, 2) ? " (claimed)" : ""}</option>; })}
                   </select>
                   <select value={yy} onChange={(e) => changePeriod(`${e.target.value}-${String(mm).padStart(2, "0")}`, half)} className={inp} aria-label="Year">
                     {[yy - 1, yy, yy + 1].filter((v, i, a) => a.indexOf(v) === i).map((y) => <option key={y} value={y}>{y}</option>)}
                   </select>
                   <select value={half} onChange={(e) => changePeriod(month, Number(e.target.value) as 1 | 2)} className={inp} aria-label="Half of month">
-                    <option value={1}>1st half</option>
-                    <option value={2}>2nd half</option>
+                    <option value={1} disabled={isTaken(month, 1)}>1st half{isTaken(month, 1) ? " (claimed)" : ""}</option>
+                    <option value={2} disabled={isTaken(month, 2)}>2nd half{isTaken(month, 2) ? " (claimed)" : ""}</option>
                   </select>
                 </div>
                 <p className="mt-1.5 text-xs text-gray-500">
