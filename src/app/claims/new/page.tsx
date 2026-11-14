@@ -122,7 +122,7 @@ function ClaimEditor() {
             <div className="text-xl font-bold text-primary">{formatRM(totals.grand)}</div>
           </div>
           <Button onClick={save} disabled={saving} className="gap-2"><Save className="size-4" /> {saving ? "Saving…" : "Save"}</Button>
-          <Link href="/claims/new"><Button variant="outline" className="gap-2"><FilePlus2 className="size-4" /> New claim</Button></Link>
+          <Link href="/claims/new"><Button className="gap-2"><FilePlus2 className="size-4" /> New claim</Button></Link>
         </div>
       </div>
 

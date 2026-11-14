@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Clock, Download, FilePlus2, XCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowRight, CheckCircle2, Clock, Download, XCircle } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
 import { claimTotal, formatDate, formatRM, getSalesperson, round2, TODAY } from "@/lib/data";
 import { useStore } from "@/lib/store";
@@ -25,9 +24,6 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-gray-900">{user.role === "admin" ? "Hello, Admin 👋" : user.role === "salesman" ? `Hello, ${user.name} 👋` : "Hello, HOD 👋"}</h1>
           <p className="mt-1 text-sm text-gray-500">{formatDate(TODAY)} · {user.role === "salesman" ? "Your expense claims" : "Salesman expense claims"}</p>
         </div>
-        {user.canEdit && (
-          <Link href="/claims/new"><Button className="gap-2"><FilePlus2 className="size-4" /> New claim</Button></Link>
-        )}
       </div>
 
       {(user.role === "hod" || user.isSuper) && by("pending").length > 0 && (
