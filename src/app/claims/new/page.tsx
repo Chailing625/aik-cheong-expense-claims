@@ -46,7 +46,7 @@ function ClaimEditor() {
   const { claims, salespeople, saveClaim } = useStore();
   const editing = claims.find((c) => c.id === editId && (c.status === "pending" || c.status === "rejected"));
 
-  const [spId, setSpId] = useState(editing?.salespersonId ?? "");
+  const [spId, setSpId] = useState(editing?.salespersonId ?? (user.role === "salesman" ? user.salespersonId ?? "" : ""));
   const dp = defaultPeriod(TODAY);
   const [month, setMonth] = useState(editing?.periodMonth ?? dp.periodMonth);
   const [half, setHalf] = useState<1 | 2>(editing?.half ?? dp.half);
@@ -107,7 +107,7 @@ function ClaimEditor() {
     }
   };
 
-  const active = salespeople.filter((s) => !s.suspended || s.id === editing?.salespersonId);
+  const active = salespeople.filter((s) => (user.role !== "salesman" || s.id === user.salespersonId) && (!s.suspended || s.id === editing?.salespersonId));
 
   return (
     <>
@@ -143,7 +143,7 @@ function ClaimEditor() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-xs font-medium text-gray-600">Sales person</label>
-                <select value={spId} onChange={(e) => setSpId(e.target.value)} className={inp}>
+                <select value={spId} onChange={(e) => setSpId(e.target.value)} disabled={user.role === "salesman"} className={inp}>
                   <option value="">Select sales person…</option>
                   {active.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
@@ -154,7 +154,7 @@ function ClaimEditor() {
                     <span>Bank: <b className="text-gray-900">{sp.bank}</b></span>
                     <span>Area: <b className="text-gray-900">{sp.area}</b></span>
                     <span>Account no.: <b className="text-gray-900">{sp.accountNo}</b></span>
-                    <span className="text-gray-400">Change these in <Link href="/salespeople" className="underline">Sales People</Link></span>
+                    {user.role !== "salesman" && <span className="text-gray-400">Change these in <Link href="/salespeople" className="underline">Sales People</Link></span>}
                   </div>
                 )}
               </div>

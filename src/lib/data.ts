@@ -2,7 +2,7 @@
 
 import type { Receipt } from "./receipts";
 
-export type Role = "admin" | "hod";
+export type Role = "admin" | "hod" | "salesman";
 export type Status = "pending" | "approved" | "rejected";
 
 export const TODAY = "2026-11-13";
@@ -12,13 +12,14 @@ export interface User {
   name: string;
   role: Role; // a super admin counts as "admin" everywhere
   isSuper?: boolean;
+  salespersonId?: string; // set for salesperson logins: which sales person they are
   canView: boolean;
   canEdit: boolean;
   canDelete: boolean;
 }
 
 
-export const ROLE_LABEL: Record<Role, string> = { admin: "Admin", hod: "HOD" };
+export const ROLE_LABEL: Record<Role, string> = { admin: "Admin", hod: "HOD", salesman: "Salesperson" };
 
 export const BANKS = [
   "Maybank", "CIMB Bank", "Public Bank", "RHB Bank", "Hong Leong Bank", "AmBank",

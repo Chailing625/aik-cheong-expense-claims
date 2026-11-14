@@ -21,6 +21,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<Role | null>(null);
   const [isSuper, setIsSuper] = useState(false);
   const [name, setName] = useState("");
+  const [salespersonId, setSalespersonId] = useState<string | undefined>();
   const [username, setUsername] = useState("");
   const [perms, setPerms] = useState({ view: false, edit: false, del: false });
   const [loading, setLoading] = useState(true);
@@ -49,7 +50,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     let alive = true;
     supabase
       .from("profiles")
-      .select("role, full_name, username, active, can_view, can_edit, can_delete")
+      .select("role, full_name, username, active, can_view, can_edit, can_delete, salesperson_id")
       .eq("id", uid)
       .maybeSingle()
       .then(({ data }) => {
@@ -59,6 +60,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setIsSuper(r === "superadmin");
         const all = r === "superadmin";
         setPerms({ view: all || !!data?.can_view, edit: all || !!data?.can_edit, del: all || !!data?.can_delete });
+        setSalespersonId(data?.salesperson_id ?? undefined);
         setUsername(data?.username ?? "");
         setName(data?.full_name || data?.username || "User");
         setLoading(false);
@@ -68,7 +70,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     };
   }, [uid]);
 
-  const user: User | null = session && role ? { id: session.user.id, name, role, isSuper, canView: perms.view, canEdit: perms.edit, canDelete: perms.del } : null;
+  const user: User | null = session && role && (role !== "salesman" || salespersonId) ? { id: session.user.id, name, role, isSuper, canView: perms.view, canEdit: perms.edit, canDelete: perms.del, salespersonId } : null;
   return (
     <Ctx.Provider value={{ loading, session, user, username, mustChangePassword: session?.user.user_metadata?.must_change_password === true, signOut: async () => void (await supabase.auth.signOut()) }}>
       {children}

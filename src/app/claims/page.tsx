@@ -17,6 +17,7 @@ export default function Claims() {
   const [q, setQ] = useState("");
 
   const list = claims
+    .filter((c) => user.role !== "salesman" || c.salespersonId === user.salespersonId)
     .filter((c) => f === "all" || c.status === f)
     .filter((c) => (getSalesperson(salespeople, c.salespersonId)?.name ?? "").toLowerCase().includes(q.toLowerCase()) || c.period.toLowerCase().includes(q.toLowerCase()))
     .sort((a, b) => (b.submittedAt + b.id > a.submittedAt + a.id ? 1 : -1));
@@ -26,7 +27,7 @@ export default function Claims() {
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Claims</h1>
-          <p className="mt-1 text-sm text-gray-500">All salesman claim forms. Only approved claims can be downloaded.</p>
+          <p className="mt-1 text-sm text-gray-500">{user.role === "salesman" ? "Your claim forms." : "All salesman claim forms."} Only approved claims can be downloaded.</p>
         </div>
         {user.canEdit && (
           <Link href="/claims/new"><Button className="gap-2"><FilePlus2 className="size-4" /> New claim</Button></Link>

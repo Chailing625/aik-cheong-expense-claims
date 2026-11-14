@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState, type ReactNode } from "react";
 import { CheckSquare, FilePlus2, LayoutDashboard, Menu, Receipt, UserRound, Users, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ROLE_LABEL, type Role } from "@/lib/data";
@@ -11,8 +11,8 @@ import { RoastStrip } from "@/components/roast-strip";
 
 const NAV: { href: string; label: string; icon: typeof Receipt; roles: Role[]; superOnly?: boolean }[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "hod"] },
-  { href: "/claims/new", label: "New Claim", icon: FilePlus2, roles: ["admin", "hod"] },
-  { href: "/claims", label: "Claims", icon: Receipt, roles: ["admin", "hod"] },
+  { href: "/claims/new", label: "New Claim", icon: FilePlus2, roles: ["admin", "hod", "salesman"] },
+  { href: "/claims", label: "Claims", icon: Receipt, roles: ["admin", "hod", "salesman"] },
   { href: "/approvals", label: "Approvals", icon: CheckSquare, roles: ["hod"] },
   { href: "/salespeople", label: "Sales People", icon: UserRound, roles: ["admin"] },
   { href: "/users", label: "Staff Accounts", icon: Users, roles: ["admin"], superOnly: true },
@@ -22,6 +22,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user } = useUser();
   const { error } = useStore();
   const path = usePathname();
+  const router = useRouter();
+  // salespeople may only use their own claims; send them back if they open any other page
+  const blocked = user.role === "salesman" && !(path === "/claims" || path.startsWith("/claims/") || path === "/account");
+  useEffect(() => {
+    if (blocked) router.replace("/claims");
+  }, [blocked, router]);
   const [open, setOpen] = useState(false);
   const items = NAV.filter(
     (n) =>
@@ -89,7 +95,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="px-4 pb-24 pt-5 sm:px-6 lg:ml-60 lg:px-6 lg:pb-10 lg:pt-8">
         <div className="mx-auto max-w-[1500px]">
           {error && <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">Could not load data: {error}</div>}
-          {children}
+          {blocked ? null : children}
         </div>
       </main>
 
@@ -130,7 +136,7 @@ function UserChip() {
     <div className="border-t pt-3">
       <div className="flex items-center gap-3">
         <div className="flex size-9 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-primary">
-          {user.role === "admin" ? "AD" : "HD"}
+          {user.role === "admin" ? "AD" : user.role === "salesman" ? "SP" : "HD"}
         </div>
         <div className="min-w-0 text-sm leading-tight">
           <div className="truncate font-medium text-gray-900">{user.name}</div>
