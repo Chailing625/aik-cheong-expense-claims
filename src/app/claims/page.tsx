@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import { Download, Eye, FilePlus2, Pencil, Search, Trash2 } from "lucide-react";
+import { Download, Eye, Pencil, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { claimTotal, formatDate, getSalesperson, money, STATUS_LABEL, type Status } from "@/lib/data";
@@ -29,9 +29,6 @@ export default function Claims() {
           <h1 className="text-2xl font-bold text-gray-900">Claims</h1>
           <p className="mt-1 text-sm text-gray-500">{user.role === "salesman" ? "Your claim forms." : "All salesman claim forms."} Only approved claims can be downloaded.</p>
         </div>
-        {user.canEdit && (
-          <Link href="/claims/new"><Button className="gap-2"><FilePlus2 className="size-4" /> New claim</Button></Link>
-        )}
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
