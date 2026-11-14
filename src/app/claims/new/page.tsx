@@ -95,8 +95,8 @@ function ClaimEditor() {
     const errs: string[] = [];
     if (!spId) errs.push("Choose the sales person.");
     if (totals.grand <= 0) errs.push("Key in at least one amount.");
-    if (user.role === "salesman" && claims.some((c) => c.id !== editing?.id && c.salespersonId === spId && c.periodMonth === month && c.half === half))
-      errs.push(`You already have a claim for ${period}. Please edit that claim, or choose a different claim period.`);
+    if (claims.some((c) => c.id !== editing?.id && c.salespersonId === spId && c.periodMonth === month && c.half === half))
+      errs.push(`There is already a claim for this sales person for ${period}. Please edit that claim, or choose a different claim period.`);
     setErrors(errs);
     if (errs.length) return;
     setSaving(true);
