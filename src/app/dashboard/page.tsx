@@ -9,7 +9,9 @@ import { useUser } from "@/lib/user-context";
 
 export default function Dashboard() {
   const { user } = useUser();
-  const { claims, salespeople } = useStore();
+  const { claims: allClaims, salespeople } = useStore();
+  // a salesperson only ever sees their own claims here
+  const claims = user.role === "salesman" ? allClaims.filter((c) => c.salespersonId === user.salespersonId) : allClaims;
   const by = (s: string) => claims.filter((c) => c.status === s);
   const sum = (l: typeof claims) => round2(l.reduce((a, c) => a + claimTotal(c), 0));
   const recent = [...claims].sort((a, b) => (b.submittedAt + b.id > a.submittedAt + a.id ? 1 : -1)).slice(0, 6);
@@ -20,8 +22,8 @@ export default function Dashboard() {
     <>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{user.role === "admin" ? "Hello, Admin 👋" : "Hello, HOD 👋"}</h1>
-          <p className="mt-1 text-sm text-gray-500">{formatDate(TODAY)} · Salesman expense claims</p>
+          <h1 className="text-2xl font-bold text-gray-900">{user.role === "admin" ? "Hello, Admin 👋" : user.role === "salesman" ? `Hello, ${user.name} 👋` : "Hello, HOD 👋"}</h1>
+          <p className="mt-1 text-sm text-gray-500">{formatDate(TODAY)} · {user.role === "salesman" ? "Your expense claims" : "Salesman expense claims"}</p>
         </div>
         {user.canEdit && (
           <Link href="/claims/new"><Button className="gap-2"><FilePlus2 className="size-4" /> New claim</Button></Link>
