@@ -1,18 +1,18 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import { Download, Eye, Pencil, Search, Trash2 } from "lucide-react";
+import { Download, Eye, Pencil, Search, Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
-import { claimTotal, formatDate, getSalesperson, money, STATUS_LABEL, type Status } from "@/lib/data";
+import { canEditClaim, claimTotal, formatDate, getSalesperson, money, STATUS_LABEL, type Status } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { useUser } from "@/lib/user-context";
 
-const FILTERS: ("all" | Status)[] = ["all", "pending", "approved", "rejected"];
+const FILTERS: ("all" | Status)[] = ["all", "draft", "pending", "approved", "rejected"];
 
 export default function Claims() {
   const { user } = useUser();
-  const { claims, salespeople, deleteClaim } = useStore();
+  const { claims, salespeople, deleteClaim, submitClaim } = useStore();
   const [f, setF] = useState<"all" | Status>("all");
   const [q, setQ] = useState("");
 
@@ -37,7 +37,7 @@ export default function Claims() {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search sales person or period" className="w-full rounded-lg border bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-primary" />
         </div>
         <div className="flex gap-2 overflow-x-auto">
-          {FILTERS.map((s) => (
+          {FILTERS.filter((s) => s !== "draft" || user.role === "salesman").map((s) => (
             <button key={s} onClick={() => setF(s)} className={`whitespace-nowrap rounded-full border px-3.5 py-1.5 text-sm ${f === s ? "border-primary bg-primary text-white" : "bg-white text-gray-700 hover:bg-gray-50"}`}>
               {s === "all" ? "All" : s === "pending" ? "Pending" : STATUS_LABEL[s]}
             </button>
@@ -77,8 +77,13 @@ export default function Claims() {
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1.5">
                       <Link href={`/claims/${c.id}`}><Button size="sm" variant="outline" className="gap-1"><Eye className="size-3.5" /> View</Button></Link>
-                      {user.canEdit && (c.status === "pending" || c.status === "rejected") && (
+                      {canEditClaim(user, c) && (
                         <Link href={`/claims/new?edit=${c.id}`}><Button size="sm" variant="outline" className="gap-1"><Pencil className="size-3.5" /> Edit</Button></Link>
+                      )}
+                      {user.role === "salesman" && user.canEdit && c.status === "draft" && (
+                        <Button size="sm" className="gap-1" onClick={() => { if (confirm(`Submit the claim for ${c.period} to the HOD for approval? You cannot change it after submitting.`)) submitClaim(c.id, user).catch((e: Error) => alert(e.message)); }}>
+                          <Send className="size-3.5" /> Submit
+                        </Button>
                       )}
                       {user.canDelete && c.status !== "approved" && (
                         <Button size="sm" variant="outline" className="gap-1 border-red-300 text-red-600 hover:bg-red-50" onClick={() => { if (confirm(`Delete the claim for ${sp?.name ?? "this person"} (${c.period})? It will be hidden from all lists.`)) deleteClaim(c.id).catch((e: Error) => alert(e.message)); }}>

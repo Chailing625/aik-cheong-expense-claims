@@ -2,13 +2,13 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Check, CheckCircle2, Clock, Download, Paperclip, Pencil, Trash2, X, XCircle } from "lucide-react";
+import { ArrowLeft, Check, CheckCircle2, Clock, Download, Paperclip, Pencil, Send, Trash2, X, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AttachmentPages, ReceiptGallery } from "@/components/receipt-gallery";
 import { getReceipt } from "@/lib/receipts";
 import { StatusBadge } from "@/components/status-badge";
 import { ClaimForm, ScaledPage, downloadClaimPdf } from "@/components/claim-form";
-import { claimTotal, formatDate, formatRM, getSalesperson } from "@/lib/data";
+import { canEditClaim, claimTotal, formatDate, formatRM, getSalesperson } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { useUser } from "@/lib/user-context";
 
@@ -24,11 +24,11 @@ function ClaimDetail() {
   const { id } = useParams<{ id: string }>();
   const autoDownload = useSearchParams().get("download") === "1";
   const { user } = useUser();
-  const { claims, salespeople, decide, deleteClaim } = useStore();
+  const { claims, salespeople, decide, deleteClaim, submitClaim } = useStore();
   const router = useRouter();
   const claim = claims.find((c) => c.id === id);
   const exportRef = useRef<HTMLDivElement>(null);
-  const [dialog, setDialog] = useState<null | "approve" | "reject">(null);
+  const [dialog, setDialog] = useState<null | "approve" | "reject" | "submit">(null);
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -68,7 +68,7 @@ function ClaimDetail() {
     return <p className="text-gray-600">Claim not found. <Link href="/claims" className="text-primary underline">Back to Claims</Link></p>;
 
   const data = { period: claim.period, referenceNo: claim.referenceNo, salesperson: sp, rows: claim.rows, notes: claim.notes, checkedBy: claim.checkedBy };
-  const watermark = claim.status === "approved" ? undefined : claim.status === "rejected" ? "REJECTED" : "PENDING\nHOD APPROVAL";
+  const watermark = claim.status === "approved" ? undefined : claim.status === "rejected" ? "REJECTED" : claim.status === "draft" ? "DRAFT\nNOT SUBMITTED" : "PENDING\nHOD APPROVAL";
 
   return (
     <>
@@ -87,7 +87,7 @@ function ClaimDetail() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {user.canEdit && (claim.status === "pending" || claim.status === "rejected") && (
+          {canEditClaim(user, claim) && (
             <Link href={`/claims/new?edit=${claim.id}`}>
               <Button variant="outline" className="gap-2"><Pencil className="size-4" /> Edit</Button>
             </Link>
@@ -104,6 +104,9 @@ function ClaimDetail() {
               <Trash2 className="size-4" /> Delete
             </Button>
           )}
+          {user.role === "salesman" && user.canEdit && claim.status === "draft" && (
+            <Button className="gap-2" onClick={() => setDialog("submit")}><Send className="size-4" /> Submit to HOD</Button>
+          )}
           {(user.role === "hod" || user.isSuper) && claim.status === "pending" && (
             <>
               <Button variant="outline" className="gap-2 border-red-300 text-red-600 hover:bg-red-50" onClick={() => setDialog("reject")}><X className="size-4" /> Reject</Button>
@@ -116,6 +119,9 @@ function ClaimDetail() {
         </div>
       </div>
 
+      {claim.status === "draft" && user.role === "salesman" && (
+        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3.5 text-sm text-blue-900"><b>This claim is saved as a draft.</b> The HOD cannot see it yet. Check the form and attachments, then press <b>Submit to HOD</b>.</div>
+      )}
       {!approved && (
         <p className="mb-3 text-xs text-gray-500">Download is only available after the HOD approves this claim.</p>
       )}
@@ -164,7 +170,23 @@ function ClaimDetail() {
         </div>
       )}
 
-      {dialog && (
+      {dialog === "submit" && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-bold">Submit this claim to the HOD?</h3>
+            <p className="mt-1 text-sm text-gray-500">{sp?.name} · {claim.period} · {formatRM(claimTotal(claim))}</p>
+            <p className="mt-3 text-sm text-gray-700">Once submitted, the HOD will review it and you cannot change it unless it is rejected.</p>
+            <div className="mt-5 flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setDialog(null)}>Cancel</Button>
+              <Button className="flex-1" disabled={busy} onClick={() => { setBusy(true); submitClaim(claim.id, user).catch((e: Error) => alert(e.message)).finally(() => { setBusy(false); setDialog(null); }); }}>
+                {busy ? "Submitting…" : "Yes, submit"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(dialog === "approve" || dialog === "reject") && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
             <h3 className="text-lg font-bold">{dialog === "approve" ? "Approve this claim?" : "Reject this claim?"}</h3>

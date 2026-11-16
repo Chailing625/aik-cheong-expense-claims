@@ -39,6 +39,16 @@ export default function Dashboard() {
         </Link>
       )}
 
+      {user.role === "salesman" && by("draft").length > 0 && (
+        <Link href="/claims" className="mb-5 flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50 p-4 hover:bg-blue-100">
+          <div className="flex items-center gap-3">
+            <Clock className="size-5 text-primary" />
+            <div className="font-semibold text-gray-900">You have {by("draft").length} draft claim{by("draft").length > 1 ? "s" : ""} not submitted yet</div>
+          </div>
+          <ArrowRight className="size-5 text-primary" />
+        </Link>
+      )}
+
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat icon={<Clock className="size-4 text-yellow-600" />} label="Waiting for HOD" value={String(by("pending").length)} sub={formatRM(sum(by("pending")))} />
         <Stat icon={<CheckCircle2 className="size-4 text-green-600" />} label="Approved (ready to download)" value={String(by("approved").length)} sub={formatRM(sum(by("approved")))} />

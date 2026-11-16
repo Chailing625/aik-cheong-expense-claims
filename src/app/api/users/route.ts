@@ -65,13 +65,13 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   const me = await requireSuperAdmin(request);
   if (!me) return bad("Not allowed", 403);
-  const body = (await request.json().catch(() => null)) as { id?: string; role?: string; active?: boolean; password?: string; fullName?: string; can_view?: boolean; can_edit?: boolean; can_delete?: boolean } | null;
+  const body = (await request.json().catch(() => null)) as { id?: string; role?: string; active?: boolean; password?: string; fullName?: string; username?: string; can_view?: boolean; can_edit?: boolean; can_delete?: boolean } | null;
   if (!body?.id) return bad("Missing account.");
   const { data: target } = await supabaseAdmin.from("profiles").select("role").eq("id", body.id).maybeSingle();
   if (!target) return bad("Account not found.", 404);
   if (target.role === "superadmin") return bad("The super admin account cannot be changed here.", 403);
 
-  const update: { role?: string; active?: boolean; full_name?: string; can_view?: boolean; can_edit?: boolean; can_delete?: boolean } = { ...cleanPerms(body) };
+  const update: { role?: string; active?: boolean; full_name?: string; username?: string; email?: string; can_view?: boolean; can_edit?: boolean; can_delete?: boolean } = { ...cleanPerms(body) };
   if (body.can_view === false) {
     // View off also switches off Edit and Delete, since they cannot work without it.
     update.can_view = false;
@@ -79,12 +79,24 @@ export async function PATCH(request: Request) {
     update.can_delete = false;
   }
   if (body.role !== undefined) {
+    if (target.role !== "admin" && target.role !== "hod") return bad("This kind of account keeps its role.");
     if (!ROLES.includes(body.role as AppRole)) return bad("Choose Admin or HOD.");
     update.role = body.role;
   }
   if (body.fullName !== undefined) {
     if (!body.fullName.trim()) return bad("Enter the person's name.");
     update.full_name = body.fullName.trim();
+  }
+  if (body.username !== undefined) {
+    const username = body.username.trim().toLowerCase();
+    if (!/^[a-z0-9._-]{3,30}$/.test(username)) return bad("The ID must be 3 to 30 letters, numbers, dots, dashes or underscores, with no spaces.");
+    const taken = await supabaseAdmin.from("profiles").select("id").eq("username", username).neq("id", body.id).maybeSingle();
+    if (taken.data) return bad("That ID is already used. Choose another one.");
+    const email = `${username}@aikcheong.my`; // internal only; staff never type it
+    const r = await supabaseAdmin.auth.admin.updateUserById(body.id, { email, email_confirm: true });
+    if (r.error) return bad(r.error.message, 500);
+    update.username = username;
+    update.email = email;
   }
   if (body.active !== undefined) {
     update.active = body.active;
@@ -100,5 +112,20 @@ export async function PATCH(request: Request) {
     const { error } = await supabaseAdmin.from("profiles").update(update).eq("id", body.id);
     if (error) return bad(error.message, 500);
   }
+  return NextResponse.json({ ok: true });
+}
+
+/** Delete an account for good. Body: { id }. The super admin account and your own account cannot be deleted. */
+export async function DELETE(request: Request) {
+  const me = await requireSuperAdmin(request);
+  if (!me) return bad("Not allowed", 403);
+  const body = (await request.json().catch(() => null)) as { id?: string } | null;
+  if (!body?.id) return bad("Missing account.");
+  if (body.id === me.id) return bad("You cannot delete your own account.", 403);
+  const { data: target } = await supabaseAdmin.from("profiles").select("role").eq("id", body.id).maybeSingle();
+  if (!target) return bad("Account not found.", 404);
+  if (target.role === "superadmin") return bad("The super admin account cannot be deleted.", 403);
+  const r = await supabaseAdmin.auth.admin.deleteUser(body.id);
+  if (r.error) return bad("This account cannot be deleted because it is linked to claim history or a sales team. Switch it off instead.", 400);
   return NextResponse.json({ ok: true });
 }

@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { supabase } from "./supabase";
+import { useAuth } from "./user-context";
 import { removeFiles, type Receipt } from "./receipts";
 import { blankRows, type Claim, type DayRow, type Salesperson, type TimelineEvent, type User } from "./data";
 
@@ -21,6 +22,7 @@ interface Store {
   claims: Claim[];
   salespeople: Salesperson[];
   saveClaim: (input: ClaimInput, actor: User, id?: string) => Promise<string>;
+  submitClaim: (id: string, actor: User) => Promise<void>;
   decide: (ids: string[], approve: boolean, comment: string) => Promise<void>;
   deleteClaim: (id: string) => Promise<void>;
   saveSalesperson: (sp: Omit<Salesperson, "id" | "suspended"> & { id?: string }) => Promise<void>;
@@ -35,6 +37,8 @@ const fail = (e: { message: string } | null) => {
 };
 
 export function StoreProvider({ children }: { children: ReactNode }) {
+  const { user: me } = useAuth();
+  const isSalesman = me?.role === "salesman"; // drafts belong to the salesperson; nobody else sees them
   const [claims, setClaims] = useState<Claim[]>([]);
   const [salespeople, setSalespeople] = useState<Salesperson[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +59,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       sp.data.map((s) => ({ id: s.id, name: s.name, accountName: s.account_name, position: s.position, area: s.area, bank: s.bank, accountNo: s.account_no, suspended: s.suspended }))
     );
     setClaims(
-      cl.data.map((c): Claim => {
+      cl.data.filter((c) => isSalesman || c.status !== "draft").map((c): Claim => {
         const rows = blankRows().map((r): DayRow => {
           const d = c.claim_days.find((x) => x.day === r.day);
           return d
@@ -77,7 +81,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       })
     );
     setLoading(false);
-  }, []);
+  }, [isSalesman]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load from the database
@@ -88,7 +92,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const base = id ? claims.find((c) => c.id === id) : undefined;
     const fields = {
       reference_no: input.referenceNo, salesperson_id: input.salespersonId, period_month: input.periodMonth, half: input.half,
-      period_text: input.period, notes: input.notes, status: "pending" as const, checked_by_name: null, checked_by_date: null, reject_reason: null,
+      period_text: input.period, notes: input.notes, status: (actor.role === "salesman" ? "draft" : "pending") as "draft" | "pending", checked_by_name: null, checked_by_date: null, reject_reason: null,
     };
     let claimId = id;
     if (claimId) {
@@ -117,10 +121,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     for (const r of added)
       fail((await supabase.from("claim_receipts").insert({ id: r.id, claim_id: claimId!, name: r.name, type: r.type, storage_path: r.path! })).error);
 
-    const label = !base ? "Saved and sent to HOD" : base.status === "rejected" ? "Corrected and resubmitted to HOD" : "Edited by admin";
+    const label = actor.role === "salesman" ? (base ? "Edited (draft, not yet submitted)" : "Saved as draft") : !base ? "Saved and sent to HOD" : base.status === "rejected" ? "Corrected and resubmitted to HOD" : "Edited by admin";
     fail((await supabase.from("claim_events").insert({ claim_id: claimId, label, actor: actor.name, type: "saved" })).error);
     await reload();
     return claimId;
+  };
+
+  const submitClaim: Store["submitClaim"] = async (id, actor) => {
+    fail((await supabase.from("claims").update({ status: "pending", submitted_at: new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" }) }).eq("id", id)).error);
+    fail((await supabase.from("claim_events").insert({ claim_id: id, label: "Submitted to HOD", actor: actor.name, type: "saved" })).error);
+    await reload();
   };
 
   const decide: Store["decide"] = async (ids, approve, comment) => {
@@ -147,7 +157,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <Ctx.Provider value={{ loading, error, claims, salespeople, saveClaim, decide, deleteClaim, saveSalesperson, toggleSuspend, reload }}>{children}</Ctx.Provider>
+    <Ctx.Provider value={{ loading, error, claims, salespeople, saveClaim, submitClaim, decide, deleteClaim, saveSalesperson, toggleSuspend, reload }}>{children}</Ctx.Provider>
   );
 }
 

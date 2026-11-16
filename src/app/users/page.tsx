@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { Check, Copy, KeyRound, Lock, Plus, UserCheck, UserX } from "lucide-react";
+import { Check, Copy, KeyRound, Lock, Pencil, Plus, Trash2, UserCheck, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/lib/user-context";
@@ -9,7 +9,7 @@ interface Account {
   id: string;
   username: string | null;
   full_name: string;
-  role: "superadmin" | "admin" | "hod" | null;
+  role: "superadmin" | "admin" | "hod" | "salesman" | "manager" | null;
   active: boolean;
   can_view: boolean;
   can_edit: boolean;
@@ -22,7 +22,7 @@ const PERMS = [
   { key: "can_delete", label: "Delete" },
 ] as const;
 
-const ROLE_NAME = { superadmin: "Super Admin", admin: "Admin (key in claims)", hod: "HOD (approves)" } as const;
+const ROLE_NAME = { superadmin: "Super Admin", admin: "Admin (key in claims)", hod: "HOD (approves)", salesman: "Salesperson", manager: "Sales Manager" } as const;
 const inp = "w-full rounded-lg border bg-white px-3 py-2.5 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm";
 
 /** Easy-to-read temporary password, e.g. "Maple-Coast-4821" */
@@ -32,7 +32,7 @@ function makePassword() {
   return `${words[r[0] % words.length]}-${words[r[1] % words.length]}-${1000 + (r[2] % 9000)}`;
 }
 
-async function call(method: "GET" | "POST" | "PATCH", body?: unknown) {
+async function call(method: "GET" | "POST" | "PATCH" | "DELETE", body?: unknown) {
   const { data } = await supabase.auth.getSession();
   const res = await fetch("/api/users", {
     method,
@@ -52,6 +52,8 @@ export default function UsersPage() {
   const [form, setForm] = useState<null | { fullName: string; id: string; role: "admin" | "hod"; password: string }>(null);
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [edit, setEdit] = useState<null | { id: string; fullName: string; username: string; role: "admin" | "hod" | null; label: string }>(null);
+  const [editError, setEditError] = useState("");
   const [reveal, setReveal] = useState<null | { title: string; id: string; password: string }>(null);
   const [copied, setCopied] = useState(false);
 
@@ -105,6 +107,31 @@ export default function UsersPage() {
     }
   };
 
+  const saveEdit = async () => {
+    if (!edit) return;
+    setBusy(true);
+    setEditError("");
+    try {
+      await call("PATCH", { id: edit.id, fullName: edit.fullName, username: edit.username, ...(edit.role ? { role: edit.role } : {}) });
+      setEdit(null);
+      await load();
+    } catch (e) {
+      setEditError((e as Error).message);
+    }
+    setBusy(false);
+  };
+
+  const remove = async (a: Account) => {
+    if (!confirm(`Delete the account of ${a.full_name || a.username} for good? They will not be able to sign in any more. This cannot be undone.`)) return;
+    setError("");
+    try {
+      await call("DELETE", { id: a.id });
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
   const copy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -142,6 +169,8 @@ export default function UsersPage() {
                   <td className="px-4 py-3">
                     {isSuper ? (
                       <span className="font-medium">Super Admin</span>
+                    ) : a.role !== "admin" && a.role !== "hod" ? (
+                      <span className="font-medium">{a.role ? ROLE_NAME[a.role] : "—"}</span>
                     ) : (
                       <select value={a.role ?? ""} onChange={(e) => void patch({ id: a.id, role: e.target.value })} className="rounded-md border bg-white px-2 py-1 text-sm">
                         <option value="admin">{ROLE_NAME.admin}</option>
@@ -167,11 +196,17 @@ export default function UsersPage() {
                   <td className="px-4 py-3">
                     {!isSuper && (
                       <div className="flex justify-end gap-1.5">
+                        <Button size="sm" variant="outline" className="gap-1" onClick={() => { setEdit({ id: a.id, fullName: a.full_name, username: a.username ?? "", role: a.role === "admin" || a.role === "hod" ? a.role : null, label: a.role ? ROLE_NAME[a.role] : "" }); setEditError(""); }}>
+                          <Pencil className="size-3.5" /> Edit
+                        </Button>
                         <Button size="sm" variant="outline" className="gap-1" onClick={() => { const pw = makePassword(); if (confirm(`Set a new temporary password for ${a.full_name || a.username}? They must change it at next sign-in.`)) void patch({ id: a.id, password: pw }, { id: a.username ?? "", password: pw }); }}>
                           <KeyRound className="size-3.5" /> New password
                         </Button>
                         <Button size="sm" variant="outline" className={`gap-1 ${a.active ? "border-red-300 text-red-600 hover:bg-red-50" : ""}`} onClick={() => { if (!a.active || confirm(`Switch off ${a.full_name || a.username}? They will not be able to sign in.`)) void patch({ id: a.id, active: !a.active }); }}>
                           {a.active ? <><UserX className="size-3.5" /> Switch off</> : <><UserCheck className="size-3.5" /> Switch on</>}
+                        </Button>
+                        <Button size="sm" variant="outline" className="gap-1 border-red-300 text-red-600 hover:bg-red-50" onClick={() => void remove(a)}>
+                          <Trash2 className="size-3.5" /> Delete
                         </Button>
                       </div>
                     )}
@@ -195,7 +230,7 @@ export default function UsersPage() {
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">ID (they sign in with this)</label>
-                <input className={inp} type="text" autoCapitalize="none" spellCheck={false} placeholder="e.g. mary.tan" value={form.id} onChange={(e) => setForm({ ...form, id: e.target.value.toLowerCase().replace(/s/g, "") })} />
+                <input className={inp} type="text" autoCapitalize="none" spellCheck={false} placeholder="e.g. mary.tan" value={form.id} onChange={(e) => setForm({ ...form, id: e.target.value.toLowerCase().replace(/\s/g, "") })} />
                 <p className="mt-1 text-xs text-gray-500">3 to 30 letters, numbers, dots, dashes or underscores. No spaces.</p>
               </div>
               <div>
@@ -218,6 +253,41 @@ export default function UsersPage() {
             <div className="mt-5 flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setForm(null)}>Cancel</Button>
               <Button className="flex-1" disabled={busy} onClick={create}>{busy ? "Creating…" : "Create account"}</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {edit && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-bold">Edit staff account</h3>
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="mb-1 block text-sm font-medium">Name</label>
+                <input className={inp} value={edit.fullName} onChange={(e) => setEdit({ ...edit, fullName: e.target.value })} />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">ID (they sign in with this)</label>
+                <input className={inp} type="text" autoCapitalize="none" spellCheck={false} value={edit.username} onChange={(e) => setEdit({ ...edit, username: e.target.value.toLowerCase().replace(/\s/g, "") })} />
+                <p className="mt-1 text-xs text-gray-500">If you change the ID, tell the person their new ID. Their password stays the same.</p>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Role</label>
+                {edit.role ? (
+                  <select className={inp} value={edit.role} onChange={(e) => setEdit({ ...edit, role: e.target.value as "admin" | "hod" })}>
+                    <option value="admin">{ROLE_NAME.admin}</option>
+                    <option value="hod">{ROLE_NAME.hod}</option>
+                  </select>
+                ) : (
+                  <p className="rounded-lg bg-gray-50 px-3 py-2.5 text-sm text-gray-700">{edit.label}</p>
+                )}
+              </div>
+            </div>
+            {editError && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{editError}</p>}
+            <div className="mt-5 flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setEdit(null)}>Cancel</Button>
+              <Button className="flex-1" disabled={busy || !edit.fullName.trim()} onClick={saveEdit}>{busy ? "Saving…" : "Save"}</Button>
             </div>
           </div>
         </div>

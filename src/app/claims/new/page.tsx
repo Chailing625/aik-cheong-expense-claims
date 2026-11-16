@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, Lock, Paperclip, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ClaimForm, ScaledPage } from "@/components/claim-form";
-import { COLS, MONTH_NAMES, TODAY, blankRows, claimTotals, defaultPeriod, formatDate, formatRM, periodDays, periodText, round2, type AmountKey, type DayRow } from "@/lib/data";
+import { COLS, MONTH_NAMES, TODAY, blankRows, canEditClaim, claimTotals, defaultPeriod, formatDate, formatRM, periodDays, periodText, round2, type AmountKey, type DayRow } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { saveFiles, type Receipt } from "@/lib/receipts";
 import { ReceiptGallery } from "@/components/receipt-gallery";
@@ -46,7 +46,7 @@ function ClaimEditor() {
   const router = useRouter();
   const editId = useSearchParams().get("edit");
   const { claims, salespeople, saveClaim } = useStore();
-  const editing = claims.find((c) => c.id === editId && (c.status === "pending" || c.status === "rejected"));
+  const editing = claims.find((c) => c.id === editId && canEditClaim(user, c));
 
   const [spId, setSpId] = useState(editing?.salespersonId ?? (user.role === "salesman" ? user.salespersonId ?? "" : ""));
   const dp = defaultPeriod(TODAY);
@@ -272,7 +272,7 @@ function ClaimEditor() {
           </section>
 
           <div className="flex items-center justify-between rounded-xl border bg-white p-4">
-            <p className="text-xs text-gray-500">Saving sends the claim to the HOD for approval.</p>
+            <p className="text-xs text-gray-500">{user.role === "salesman" ? "Saving keeps the claim as a draft. Open it afterwards and press Submit to send it to the HOD." : "Saving sends the claim to the HOD for approval."}</p>
             <Button onClick={save} disabled={saving} className="gap-2"><Save className="size-4" /> {saving ? "Saving…" : "Save"}</Button>
           </div>
         </div>

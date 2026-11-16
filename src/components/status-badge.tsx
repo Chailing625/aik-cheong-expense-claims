@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import { STATUS_LABEL, type Status } from "@/lib/data";
 
 const styles: Record<Status, string> = {
+  draft: "bg-gray-100 text-gray-700 ring-gray-300",
   pending: "bg-yellow-100 text-yellow-800 ring-yellow-300",
   approved: "bg-green-100 text-green-800 ring-green-300",
   rejected: "bg-red-100 text-red-700 ring-red-300",

@@ -3,7 +3,7 @@
 import type { Receipt } from "./receipts";
 
 export type Role = "admin" | "hod" | "salesman";
-export type Status = "pending" | "approved" | "rejected";
+export type Status = "draft" | "pending" | "approved" | "rejected";
 
 export const TODAY = "2026-11-13";
 
@@ -141,9 +141,14 @@ export function formatDate(iso?: string) {
 }
 
 export const STATUS_LABEL: Record<Status, string> = {
+  draft: "Draft – not submitted",
   pending: "Pending HOD approval",
   approved: "Approved",
   rejected: "Rejected",
 };
 
 export const getSalesperson = (list: Salesperson[], id: string) => list.find((s) => s.id === id);
+
+/** A salesperson can change their own drafts and rejected claims; Admin and HOD change claims that are waiting or rejected. */
+export const canEditClaim = (user: User, claim: { status: Status }) =>
+  user.canEdit && (user.role === "salesman" ? claim.status === "draft" || claim.status === "rejected" : claim.status === "pending" || claim.status === "rejected");
