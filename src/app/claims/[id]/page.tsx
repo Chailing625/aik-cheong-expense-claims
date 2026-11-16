@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Check, CheckCircle2, Clock, Download, Paperclip, Pencil, Trash2, X, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AttachmentPages, ReceiptGallery } from "@/components/receipt-gallery";
-import { getReceipt, blobToDataUrl } from "@/lib/receipts";
+import { getReceipt } from "@/lib/receipts";
 import { StatusBadge } from "@/components/status-badge";
 import { ClaimForm, ScaledPage, downloadClaimPdf } from "@/components/claim-form";
 import { claimTotal, formatDate, formatRM, getSalesperson } from "@/lib/data";
@@ -42,13 +42,13 @@ function ClaimDetail() {
     setBusy(true);
     setError("");
     try {
-      const pages: string[] = [];
+      // every attachment (photos and PDF files), earliest first
+      const files: { blob: Blob; type: string }[] = [];
       for (const r of claim.receipts) {
-        if (!r.type.startsWith("image/")) continue;
         const blob = await getReceipt(r);
-        if (blob) pages.push(await blobToDataUrl(blob));
+        if (blob) files.push({ blob, type: r.type });
       }
-      await downloadClaimPdf(exportRef.current, `Claim - ${sp?.name ?? "salesman"} - ${claim.period}.pdf`.replace(/[\\/:*?"<>|]/g, "-"), pages);
+      await downloadClaimPdf(exportRef.current, `Claim - ${sp?.name ?? "salesman"} - ${claim.period}.pdf`.replace(/[\\/:*?"<>|]/g, "-"), files);
     } catch {
       setError("Could not create the PDF. Please try again.");
     }

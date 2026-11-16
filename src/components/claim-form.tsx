@@ -169,10 +169,11 @@ export function ScaledPage({ children, width = 800 }: { children: React.ReactNod
   );
 }
 
-/** Turns the form into an A4 PDF file and downloads it. */
-export async function downloadClaimPdf(el: HTMLElement, filename: string, receiptImages: string[] = []) {
+/** Turns the form into an A4 PDF, adds every attachment after it in the given order (photos and PDF files), and downloads one file. */
+export async function downloadClaimPdf(el: HTMLElement, filename: string, attachments: { blob: Blob; type: string }[] = []) {
   const html2canvas = (await import("html2canvas-pro")).default;
   const { jsPDF } = await import("jspdf");
+  const { PDFDocument } = await import("pdf-lib");
   const canvas = await html2canvas(el, { scale: 2, backgroundColor: "#ffffff" });
   const pdf = new jsPDF({ unit: "mm", format: "a4" });
   const pw = 210, ph = 297, m = 8;
@@ -183,18 +184,28 @@ export async function downloadClaimPdf(el: HTMLElement, filename: string, receip
     w = (canvas.width * h) / canvas.height;
   }
   pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", (pw - w) / 2, m, w, h);
-  for (const src of receiptImages) {
-    const img = new Image();
-    img.src = src;
-    await img.decode();
-    pdf.addPage();
-    let rw = pw - 2 * m;
-    let rh = (img.height * rw) / img.width;
-    if (rh > ph - 2 * m) {
-      rh = ph - 2 * m;
-      rw = (img.width * rh) / img.height;
+
+  const out = await PDFDocument.load(pdf.output("arraybuffer"));
+  const PW = 595.28, PH = 841.89, M = 23; // A4 in points
+  for (const a of attachments) {
+    const bytes = new Uint8Array(await a.blob.arrayBuffer());
+    if (a.type === "application/pdf") {
+      const src = await PDFDocument.load(bytes, { ignoreEncryption: true });
+      (await out.copyPages(src, src.getPageIndices())).forEach((p) => out.addPage(p));
+      continue;
     }
-    pdf.addImage(src, "JPEG", (pw - rw) / 2, m, rw, rh);
+    const img = a.type === "image/png" ? await out.embedPng(bytes) : await out.embedJpg(bytes);
+    const scale = Math.min((PW - 2 * M) / img.width, (PH - 2 * M) / img.height);
+    const iw = img.width * scale, ih = img.height * scale;
+    const page = out.addPage([PW, PH]);
+    page.drawImage(img, { x: (PW - iw) / 2, y: PH - M - ih, width: iw, height: ih });
   }
-  pdf.save(filename);
+
+  const blob = new Blob([new Uint8Array(await out.save())], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
