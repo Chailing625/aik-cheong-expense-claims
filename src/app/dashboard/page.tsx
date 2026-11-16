@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Clock, Download, XCircle } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock, Download, Send, XCircle } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
 import { claimTotal, formatDate, formatRM, getSalesperson, round2, TODAY } from "@/lib/data";
 import { useStore } from "@/lib/store";
@@ -13,6 +13,7 @@ export default function Dashboard() {
   const claims = user.role === "salesman" ? allClaims.filter((c) => c.salespersonId === user.salespersonId) : allClaims;
   const by = (s: string) => claims.filter((c) => c.status === s);
   const sum = (l: typeof claims) => round2(l.reduce((a, c) => a + claimTotal(c), 0));
+  const submitted = claims.filter((c) => c.status !== "draft"); // everything already sent to the HOD
   const recent = [...claims].sort((a, b) => (b.submittedAt + b.id > a.submittedAt + a.id ? 1 : -1)).slice(0, 6);
   const month = TODAY.slice(0, 7);
   const approvedMonth = by("approved").filter((c) => (c.checkedBy?.date ?? "").startsWith(month));
@@ -49,8 +50,11 @@ export default function Dashboard() {
         </Link>
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className={`grid grid-cols-2 gap-3 ${user.role === "salesman" ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
         <Stat icon={<Clock className="size-4 text-yellow-600" />} label="Waiting for HOD" value={String(by("pending").length)} sub={formatRM(sum(by("pending")))} />
+        {user.role === "salesman" && (
+          <Stat icon={<Send className="size-4 text-primary" />} label="Submitted (all sent to HOD)" value={String(submitted.length)} sub={formatRM(sum(submitted))} />
+        )}
         <Stat icon={<CheckCircle2 className="size-4 text-green-600" />} label="Approved (ready to download)" value={String(by("approved").length)} sub={formatRM(sum(by("approved")))} />
         <Stat icon={<XCircle className="size-4 text-red-600" />} label="Rejected (needs fixing)" value={String(by("rejected").length)} sub={formatRM(sum(by("rejected")))} />
         <Stat icon={<Download className="size-4 text-primary" />} label="Approved this month" value={formatRM(sum(approvedMonth))} sub={`${approvedMonth.length} claim${approvedMonth.length === 1 ? "" : "s"}`} />
