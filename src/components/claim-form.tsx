@@ -26,7 +26,7 @@ export function ClaimForm({ data, watermark }: { data: FormData; watermark?: str
       <span style={{ width: w, borderBottom: B, minHeight: 15, fontWeight: 600, paddingLeft: 4, whiteSpace: "nowrap", overflow: "hidden" }}>{value}</span>
     </div>
   );
-  const colW = [30, 150, 92, 86, 66, 66, 76, 76, 102];
+  const colW = [30, 136, 92, 86, 80, 80, 76, 76, 88];
 
   return (
     <div style={{ position: "relative", width: 800, background: "#fff", color: "#000", padding: "26px 28px 24px", fontFamily: "Arial, Helvetica, sans-serif", fontSize: 11, boxSizing: "border-box" }}>
@@ -96,7 +96,7 @@ export function ClaimForm({ data, watermark }: { data: FormData; watermark?: str
             {COLS.map((c) => <th key={c.key} style={{ ...head, fontSize: 8.5 }}>{c.sub}</th>)}
           </tr>
           <tr>
-            {COLS.map((c) => <th key={c.key} style={{ ...head, fontSize: 8 }}>GL CODE : {c.gl}</th>)}
+            {COLS.map((c) => <th key={c.key} style={{ ...head, fontSize: 8, whiteSpace: "nowrap", padding: "3px 1px" }}>GL CODE :{c.gl && <><br />{c.gl}</>}</th>)}
           </tr>
         </thead>
         <tbody>
