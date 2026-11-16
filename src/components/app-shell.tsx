@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { CheckSquare, FilePlus2, Landmark, LayoutDashboard, Menu, Receipt, UserRound, Users, X } from "lucide-react";
+import { CheckSquare, FilePlus2, LayoutDashboard, Menu, Receipt, UserRound, Users, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ROLE_LABEL, type Role } from "@/lib/data";
 import { useUser } from "@/lib/user-context";
@@ -14,7 +14,6 @@ const NAV: { href: string; label: string; icon: typeof Receipt; roles: Role[]; s
   { href: "/claims/new", label: "New Claim", icon: FilePlus2, roles: ["admin", "hod", "salesman"] },
   { href: "/claims", label: "Claims", icon: Receipt, roles: ["admin", "hod", "salesman"] },
   { href: "/approvals", label: "Approvals", icon: CheckSquare, roles: ["hod"] },
-  { href: "/finance", label: "Finance", icon: Landmark, roles: ["admin"] },
   { href: "/salespeople", label: "Sales Person", icon: UserRound, roles: ["admin"] },
   { href: "/users", label: "Staff Accounts", icon: Users, roles: ["admin"], superOnly: true },
 ];
