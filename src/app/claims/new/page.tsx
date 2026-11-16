@@ -35,8 +35,10 @@ export default function NewClaimPage() {
 
 // the form starts from saved data when editing, so wait until it has loaded
 function WaitForData() {
-  const { loading } = useStore();
-  return loading ? <p className="text-sm text-gray-500">Loading…</p> : <ClaimEditor />;
+  const { loading, claims } = useStore();
+  const editId = useSearchParams().get("edit");
+  // the page can be kept alive in the background, so give each claim (and each new blank claim) its own fresh form
+  return loading ? <p className="text-sm text-gray-500">Loading…</p> : <ClaimEditor key={editId ?? `new-${claims.length}`} />;
 }
 
 function ClaimEditor() {
@@ -113,7 +115,8 @@ function ClaimEditor() {
     const errs: string[] = [];
     if (!spId) errs.push("Choose the sales person.");
     if (totals.grand <= 0) errs.push("Key in at least one amount.");
-    if (claims.some((c) => c.id !== editing?.id && c.salespersonId === spId && c.periodMonth === month && c.half === half))
+    // (an old claim that already shares its period with another can still be edited, as long as its period is kept)
+    if ((!editing || editing.periodMonth !== month || editing.half !== half) && claims.some((c) => c.id !== editing?.id && c.salespersonId === spId && c.periodMonth === month && c.half === half))
       errs.push(`There is already a claim for this sales person for ${period}. Please edit that claim, or choose a different claim period.`);
     setErrors(errs);
     if (errs.length) return;
@@ -174,7 +177,7 @@ function ClaimEditor() {
                     <span>Bank: <b className="text-gray-900">{sp.bank}</b></span>
                     <span>Area: <b className="text-gray-900">{sp.area}</b></span>
                     <span>Account no.: <b className="text-gray-900">{sp.accountNo}</b></span>
-                    {user.role !== "salesman" && <span className="text-gray-400">Change these in <Link href="/salespeople" className="underline">Sales People</Link></span>}
+                    {user.role !== "salesman" && <span className="text-gray-400">Change these in <Link href="/salespeople" className="underline">Sales Person</Link></span>}
                   </div>
                 )}
               </div>

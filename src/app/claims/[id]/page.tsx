@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Check, CheckCircle2, Clock, Download, Paperclip, Pencil, Trash2, X, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ReceiptGallery } from "@/components/receipt-gallery";
+import { AttachmentPages, ReceiptGallery } from "@/components/receipt-gallery";
 import { getReceipt, blobToDataUrl } from "@/lib/receipts";
 import { StatusBadge } from "@/components/status-badge";
 import { ClaimForm, ScaledPage, downloadClaimPdf } from "@/components/claim-form";
@@ -125,9 +125,12 @@ function ClaimDetail() {
       )}
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <ScaledPage>
-          <ClaimForm data={data} watermark={watermark} />
-        </ScaledPage>
+        <div className="min-w-0">
+          <ScaledPage>
+            <ClaimForm data={data} watermark={watermark} />
+          </ScaledPage>
+          <AttachmentPages receipts={claim.receipts} />
+        </div>
 
         <div className="space-y-4">
           <section className="rounded-xl border bg-white p-4">

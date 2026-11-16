@@ -23,7 +23,7 @@ export default function SalesPeople() {
     return (
       <div className="mx-auto mt-16 max-w-sm text-center text-gray-600">
         <Lock className="mx-auto mb-3 size-10 text-gray-400" />
-        <p className="font-medium">Sales People are managed by the Admin.</p>
+        <p className="font-medium">Sales Person is managed by the Admin.</p>
       </div>
     );
 
@@ -37,7 +37,7 @@ export default function SalesPeople() {
   return (
     <>
       <PageHeader
-        title="Sales People"
+        title="Sales Person"
         subtitle={`${salespeople.filter((s) => !s.suspended).length} active · ${salespeople.filter((s) => s.suspended).length} suspended`}
         action={<Button className="gap-2" onClick={() => setForm(empty)}><Plus className="size-4" /> Add sales person</Button>}
       />
@@ -82,7 +82,7 @@ export default function SalesPeople() {
             </li>
           ))}
         </ul>
-        {list.length === 0 && <div className="p-10 text-center text-sm text-gray-500">No sales people found.</div>}
+        {list.length === 0 && <div className="p-10 text-center text-sm text-gray-500">No sales person found.</div>}
       </div>
 
       {form && (

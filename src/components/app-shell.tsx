@@ -14,7 +14,7 @@ const NAV: { href: string; label: string; icon: typeof Receipt; roles: Role[]; s
   { href: "/claims/new", label: "New Claim", icon: FilePlus2, roles: ["admin", "hod", "salesman"] },
   { href: "/claims", label: "Claims", icon: Receipt, roles: ["admin", "hod", "salesman"] },
   { href: "/approvals", label: "Approvals", icon: CheckSquare, roles: ["hod"] },
-  { href: "/salespeople", label: "Sales People", icon: UserRound, roles: ["admin"] },
+  { href: "/salespeople", label: "Sales Person", icon: UserRound, roles: ["admin"] },
   { href: "/users", label: "Staff Accounts", icon: Users, roles: ["admin"], superOnly: true },
 ];
 

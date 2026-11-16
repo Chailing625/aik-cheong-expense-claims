@@ -70,7 +70,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return {
           id: c.id, referenceNo: c.reference_no, salespersonId: c.salesperson_id, period: c.period_text, periodMonth: c.period_month, half: c.half as 1 | 2,
           rows, notes: c.notes, status: c.status as Claim["status"], createdAt: c.created_at, submittedAt: c.submitted_at, timeline,
-          receipts: c.claim_receipts.map((r) => ({ id: r.id, name: r.name, type: r.type, path: r.storage_path })),
+          receipts: [...c.claim_receipts].sort((a, b) => a.created_at.localeCompare(b.created_at)).map((r) => ({ id: r.id, name: r.name, type: r.type, path: r.storage_path })),
           checkedBy: c.checked_by_name ? { name: c.checked_by_name, date: c.checked_by_date ?? "" } : undefined,
           rejectReason: c.reject_reason ?? undefined,
         };
@@ -113,8 +113,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
     const had = new Set((base?.receipts ?? []).map((r) => r.id));
     const added = input.receipts.filter((r) => !had.has(r.id) && r.path);
-    if (added.length)
-      fail((await supabase.from("claim_receipts").insert(added.map((r) => ({ id: r.id, claim_id: claimId!, name: r.name, type: r.type, storage_path: r.path! })))).error);
+    // one by one, so each gets its own time and they stay in the order they were attached
+    for (const r of added)
+      fail((await supabase.from("claim_receipts").insert({ id: r.id, claim_id: claimId!, name: r.name, type: r.type, storage_path: r.path! })).error);
 
     const label = !base ? "Saved and sent to HOD" : base.status === "rejected" ? "Corrected and resubmitted to HOD" : "Edited by admin";
     fail((await supabase.from("claim_events").insert({ claim_id: claimId, label, actor: actor.name, type: "saved" })).error);

@@ -78,3 +78,56 @@ export function ReceiptGallery({ receipts, onRemove }: { receipts: Receipt[]; on
     </>
   );
 }
+
+/** Every attachment shown full size, one after the other (earliest first), to read below the claim form. */
+export function AttachmentPages({ receipts }: { receipts: Receipt[] }) {
+  const [urls, setUrls] = useState<Record<string, string | null>>({});
+  const key = receipts.map((r) => r.id).join("|");
+
+  useEffect(() => {
+    let alive = true;
+    const created: string[] = [];
+    (async () => {
+      const next: Record<string, string | null> = {};
+      for (const r of receipts) {
+        const blob = await getReceipt(r);
+        if (blob) {
+          const u = URL.createObjectURL(blob);
+          created.push(u);
+          next[r.id] = u;
+        } else next[r.id] = null;
+      }
+      if (alive) setUrls(next);
+    })();
+    return () => {
+      alive = false;
+      created.forEach((u) => URL.revokeObjectURL(u));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  if (!receipts.length) return null;
+
+  return (
+    <div className="mt-4 space-y-4">
+      {receipts.map((r, i) => {
+        const url = urls[r.id];
+        return (
+          <div key={r.id} className="overflow-hidden rounded-lg border bg-white shadow-sm">
+            <div className="border-b bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-600">Attachment {i + 1} of {receipts.length} · {r.name}</div>
+            {url ? (
+              r.type.startsWith("image/") ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={url} alt={r.name} className="mx-auto block max-h-[1100px] w-full object-contain" />
+              ) : (
+                <iframe src={url} title={r.name} className="h-[800px] w-full" />
+              )
+            ) : (
+              <div className="p-8 text-center text-sm text-gray-400">{url === undefined ? "Loading…" : "Sample file – no image stored"}</div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
