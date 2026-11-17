@@ -68,7 +68,7 @@ function ClaimDetail() {
   if (!claim)
     return <p className="text-gray-600">Claim not found. <Link href="/claims" className="text-primary underline">Back to Claims</Link></p>;
 
-  const data = { period: claim.period, referenceNo: claim.referenceNo, salesperson: sp, rows: claim.rows, notes: claim.notes, checkedBy: claim.checkedBy };
+  const data = { period: claim.period, referenceNo: claim.referenceNo, salesperson: sp, rows: claim.rows, notes: claim.notes, checkedBy: claim.checkedBy, submitted: claim.status !== "draft" };
   const watermark = claim.status === "approved" ? undefined : claim.status === "rejected" ? "REJECTED" : claim.status === "draft" ? "DRAFT\nNOT SUBMITTED" : "PENDING\nHOD APPROVAL";
 
   return (

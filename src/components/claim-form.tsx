@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { COLS, claimTotals, formatDate, money, type DayRow, type Salesperson } from "@/lib/data";
+import { COLS, claimTotals, money, type DayRow, type Salesperson } from "@/lib/data";
 
 export interface FormData {
   period: string;
@@ -9,6 +9,7 @@ export interface FormData {
   rows: DayRow[];
   notes: string;
   checkedBy?: { name: string; date: string };
+  submitted?: boolean; // once submitted, the salesperson's name is shown as their digital signature
 }
 
 const B = "1px solid #000";
@@ -122,8 +123,8 @@ export function ClaimForm({ data, watermark }: { data: FormData; watermark?: str
       </table>
 
       <div style={{ marginTop: 22, display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 18, fontSize: 9.5 }}>
-        <Sig title="SUBMITTED BY :" name={sp?.name.toUpperCase() ?? ""} sub={sp?.position.toUpperCase() ?? ""} />
-        <Sig title="CHECKED BY:" name={data.checkedBy?.name.toUpperCase() ?? ""} sub={data.checkedBy ? "Approved " + formatDate(data.checkedBy.date) : ""} role="(HOD / ADMIN )" bold />
+        <Sig title="SUBMITTED BY :" name={data.submitted ? sp?.name ?? "" : sp?.name.toUpperCase() ?? ""} sub={sp?.position.toUpperCase() ?? ""} signed={!!data.submitted} />
+        <Sig title="CHECKED BY:" name={/^\s*super\s*admin\s*$/i.test(data.checkedBy?.name ?? "") ? "" : data.checkedBy?.name.toUpperCase() ?? ""} sub="" role="(HOD / ADMIN )" bold />
         <Sig title="VERIFIED BY:" name="" sub="" role="HR" />
         <Sig title="APPROVED BY:" name="" sub="" role="GENERAL MANAGER / DIRECTOR" />
       </div>
@@ -131,13 +132,13 @@ export function ClaimForm({ data, watermark }: { data: FormData; watermark?: str
   );
 }
 
-function Sig({ title, name, sub, role, bold }: { title: string; name: string; sub: string; role?: string; bold?: boolean }) {
+function Sig({ title, name, sub, role, bold, signed }: { title: string; name: string; sub: string; role?: string; bold?: boolean; signed?: boolean }) {
   return (
     <div>
       <div style={{ fontWeight: 600 }}>{title}</div>
-      <div style={{ height: 42, display: "flex", alignItems: "flex-end", fontWeight: bold ? 700 : 400, color: "#1d4ed8" }}>{bold ? name : ""}</div>
+      <div style={{ height: 42, display: "flex", alignItems: "flex-end", fontWeight: bold ? 700 : 400, color: "#1d4ed8", ...(signed ? { fontFamily: '"Brush Script MT", "Segoe Script", "Lucida Handwriting", cursive', fontStyle: "italic", fontSize: 17, lineHeight: 1.1, paddingBottom: 2 } : {}) }}>{bold || signed ? name : ""}</div>
       <div style={{ borderTop: B, paddingTop: 2, fontWeight: 500, minHeight: 28 }}>
-        {!bold && name && <div>{name}</div>}
+        {!bold && !signed && name && <div>{name}</div>}
         {sub && <div style={{ color: bold ? "#166534" : "#000" }}>{sub}</div>}
         {role && <div style={{ fontWeight: 700 }}>{role}</div>}
       </div>
