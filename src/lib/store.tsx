@@ -38,7 +38,8 @@ const fail = (e: { message: string } | null) => {
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const { user: me } = useAuth();
-  const isSalesman = me?.role === "salesman"; // drafts belong to the salesperson; nobody else sees them
+  const isSalesman = me?.role === "salesman";
+  const seeDrafts = isSalesman || !!me?.isSuper; // drafts belong to the salesperson; only the Super Admin can also see them
   const [claims, setClaims] = useState<Claim[]>([]);
   const [salespeople, setSalespeople] = useState<Salesperson[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,7 +60,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       sp.data.map((s) => ({ id: s.id, name: s.name, accountName: s.account_name, position: s.position, area: s.area, bank: s.bank, accountNo: s.account_no, suspended: s.suspended }))
     );
     setClaims(
-      cl.data.filter((c) => isSalesman || c.status !== "draft").map((c): Claim => {
+      cl.data.filter((c) => seeDrafts || c.status !== "draft").map((c): Claim => {
         const rows = blankRows().map((r): DayRow => {
           const d = c.claim_days.find((x) => x.day === r.day);
           return d
@@ -81,7 +82,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       })
     );
     setLoading(false);
-  }, [isSalesman]);
+  }, [seeDrafts]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load from the database
