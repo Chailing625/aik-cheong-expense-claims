@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Clock, Download, FileText, Send, XCircle } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
-import { claimTotal, formatDate, formatRM, getSalesperson, round2, TODAY } from "@/lib/data";
+import { claimTotal, formatDate, formatRM, getSalesperson, periodDays, round2, TODAY } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { useUser } from "@/lib/user-context";
 
@@ -27,10 +27,11 @@ export default function Dashboard() {
   const showDraft = user.isSuper === true;
   const showSubmitted = user.role === "salesman"; // salespeople only
 
-  // approved claims whose approval date falls inside the chosen dates
-  const approvedRange = by("approved").filter((c) => (c.checkedBy?.date ?? "") >= from && (c.checkedBy?.date ?? "") <= to);
+  // approved claims whose claim period (e.g. 1 - 15 November) falls inside the chosen dates
+  const dayStr = (c: (typeof claims)[number], which: "from" | "to") => `${c.periodMonth}-${String(periodDays(c.periodMonth, c.half)[which]).padStart(2, "0")}`;
+  const approvedRange = by("approved").filter((c) => dayStr(c, "from") <= to && dayStr(c, "to") >= from);
   const isThisMonth = from === `${month}-01` && to === monthEnd(month);
-  const byApproval = (a: (typeof claims)[number], b: (typeof claims)[number]) => ((b.checkedBy?.date ?? "") + b.id > (a.checkedBy?.date ?? "") + a.id ? 1 : -1);
+  const byPeriod = (a: (typeof claims)[number], b: (typeof claims)[number]) => (dayStr(b, "from") + b.id > dayStr(a, "from") + a.id ? 1 : -1);
 
   const groups: Record<Exclude<Sel, null>, { title: string; list: typeof claims }> = {
     draft: { title: "Draft claims (not submitted)", list: by("draft") },
@@ -38,7 +39,7 @@ export default function Dashboard() {
     pending: { title: "Pending HOD approval", list: by("pending") },
     approved: { title: "Approved claims", list: by("approved") },
     rejected: { title: "Rejected claims", list: by("rejected") },
-    range: { title: `Approved ${isThisMonth ? "this month" : `from ${formatDate(from)} to ${formatDate(to)}`}`, list: [...approvedRange].sort(byApproval) },
+    range: { title: `Total claim (approved) · claim period ${isThisMonth ? "this month" : `${formatDate(from)} to ${formatDate(to)}`}`, list: [...approvedRange].sort(byPeriod) },
   };
   const shown = sel
     ? groups[sel].list
@@ -86,7 +87,7 @@ export default function Dashboard() {
         {pendingStat}
         <Stat active={sel === "approved"} onClick={() => pick("approved")} icon={<CheckCircle2 className="size-4 text-green-600" />} label="Approved (ready to download)" value={String(by("approved").length)} sub={formatRM(sum(by("approved")))} />
         <Stat active={sel === "rejected"} onClick={() => pick("rejected")} icon={<XCircle className="size-4 text-red-600" />} label="Rejected (needs fixing)" value={String(by("rejected").length)} sub={formatRM(sum(by("rejected")))} />
-        <Stat active={sel === "range"} onClick={() => pick("range")} icon={<Download className="size-4 text-primary" />} label={isThisMonth ? "Approved this month" : "Approved in chosen dates"} value={formatRM(sum(approvedRange))} sub={`${approvedRange.length} claim${approvedRange.length === 1 ? "" : "s"}`}>
+        <Stat active={sel === "range"} onClick={() => pick("range")} icon={<Download className="size-4 text-primary" />} label={isThisMonth ? "Total claim (this month)" : "Total claim (chosen dates)"} value={formatRM(sum(approvedRange))} sub={`${approvedRange.length} approved claim${approvedRange.length === 1 ? "" : "s"} by claim period`}>
           <div className="mt-2 space-y-1 text-[11px] text-gray-500" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
             <label className="flex items-center justify-between gap-1">From <input type="date" value={from} max={to} onChange={(e) => e.target.value && setFrom(e.target.value)} className="w-[8.5rem] rounded border bg-white px-1 py-0.5 text-xs text-gray-800" /></label>
             <label className="flex items-center justify-between gap-1">To <input type="date" value={to} min={from} onChange={(e) => e.target.value && setTo(e.target.value)} className="w-[8.5rem] rounded border bg-white px-1 py-0.5 text-xs text-gray-800" /></label>
