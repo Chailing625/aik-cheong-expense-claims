@@ -8,7 +8,7 @@ import { AttachmentPages, ReceiptGallery } from "@/components/receipt-gallery";
 import { getReceipt } from "@/lib/receipts";
 import { StatusBadge } from "@/components/status-badge";
 import { ClaimForm, ScaledPage, downloadClaimPdf } from "@/components/claim-form";
-import { canEditClaim, claimTotal, formatDate, formatRM, getSalesperson } from "@/lib/data";
+import { canDownloadClaim, canEditClaim, claimTotal, formatDate, formatRM, getSalesperson } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { useUser } from "@/lib/user-context";
 
@@ -36,9 +36,10 @@ function ClaimDetail() {
 
   const sp = claim ? getSalesperson(salespeople, claim.salespersonId) : undefined;
   const approved = claim?.status === "approved";
+  const canDownload = !!claim && canDownloadClaim(user, claim);
 
   const download = async () => {
-    if (!claim || !approved || !exportRef.current) return;
+    if (!claim || !canDownload || !exportRef.current) return;
     setBusy(true);
     setError("");
     try {
@@ -56,13 +57,13 @@ function ClaimDetail() {
   };
 
   useEffect(() => {
-    if (autoDownload && approved && !autoDone.current) {
+    if (autoDownload && canDownload && !autoDone.current) {
       autoDone.current = true;
       const t = setTimeout(() => void download(), 400);
       return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoDownload, approved]);
+  }, [autoDownload, canDownload]);
 
   if (!claim)
     return <p className="text-gray-600">Claim not found. <Link href="/claims" className="text-primary underline">Back to Claims</Link></p>;
@@ -113,7 +114,7 @@ function ClaimDetail() {
               <Button className="gap-2" onClick={() => setDialog("approve")}><Check className="size-4" /> Approve</Button>
             </>
           )}
-          <Button className="gap-2" disabled={!approved || busy} onClick={download} title={approved ? "" : "Download is available after HOD approval"}>
+          <Button className="gap-2" disabled={!canDownload || busy} onClick={download} title={canDownload ? "" : "Download is available after HOD approval"}>
             <Download className="size-4" /> {busy ? "Preparing…" : "Download PDF"}
           </Button>
         </div>
@@ -122,8 +123,11 @@ function ClaimDetail() {
       {claim.status === "draft" && user.role === "salesman" && (
         <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3.5 text-sm text-blue-900"><b>This claim is saved as a draft.</b> The HOD cannot see it yet. Check the form and attachments, then press <b>Submit to HOD</b>.</div>
       )}
-      {!approved && (
+      {!canDownload && (
         <p className="mb-3 text-xs text-gray-500">Download is only available after the HOD approves this claim.</p>
+      )}
+      {canDownload && !approved && (
+        <p className="mb-3 text-xs text-gray-500">This claim is not approved yet, so the downloaded form is marked with its status.</p>
       )}
       {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
       {claim.status === "rejected" && claim.rejectReason && (
@@ -163,10 +167,10 @@ function ClaimDetail() {
         </div>
       </div>
 
-      {/* Hidden full-size copy used to build the PDF (only for approved claims) */}
-      {approved && (
+      {/* Hidden full-size copy used to build the PDF (only when this person may download) */}
+      {canDownload && (
         <div aria-hidden style={{ position: "fixed", left: -10000, top: 0 }}>
-          <div ref={exportRef}><ClaimForm data={data} /></div>
+          <div ref={exportRef}><ClaimForm data={data} watermark={watermark} /></div>
         </div>
       )}
 

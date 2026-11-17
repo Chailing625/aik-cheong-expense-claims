@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Download, Eye, Pencil, Search, Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
-import { canEditClaim, claimTotal, formatDate, getSalesperson, money, STATUS_LABEL, type Status } from "@/lib/data";
+import { canDownloadClaim, canEditClaim, claimTotal, formatDate, getSalesperson, money, STATUS_LABEL, type Status } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { useUser } from "@/lib/user-context";
 
@@ -27,7 +27,7 @@ export default function Claims() {
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Claims</h1>
-          <p className="mt-1 text-sm text-gray-500">{user.role === "salesman" ? "Your claim forms." : "All salesman claim forms."} Only approved claims can be downloaded.</p>
+          <p className="mt-1 text-sm text-gray-500">{user.role === "salesman" ? "Your claim forms." : "All salesman claim forms."} {user.role === "salesman" ? "Only approved claims can be downloaded." : "Submitted claims can be downloaded."}</p>
         </div>
       </div>
 
@@ -90,7 +90,7 @@ export default function Claims() {
                           <Trash2 className="size-3.5" /> Delete
                         </Button>
                       )}
-                      {c.status === "approved" && (
+                      {canDownloadClaim(user, c) && (
                         <Link href={`/claims/${c.id}?download=1`}><Button size="sm" className="gap-1"><Download className="size-3.5" /> Download</Button></Link>
                       )}
                     </div>

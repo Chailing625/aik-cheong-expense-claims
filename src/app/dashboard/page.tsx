@@ -25,7 +25,7 @@ export default function Dashboard() {
   const [sel, setSel] = useState<Sel>(null);
   const pick = (v: Sel) => setSel((cur) => (cur === v ? null : v));
   const showDraft = user.isSuper === true;
-  const showSubmitted = user.role === "salesman" || user.isSuper === true;
+  const showSubmitted = user.role === "salesman"; // salespeople only
 
   // approved claims whose approval date falls inside the chosen dates
   const approvedRange = by("approved").filter((c) => (c.checkedBy?.date ?? "") >= from && (c.checkedBy?.date ?? "") <= to);
@@ -46,7 +46,7 @@ export default function Dashboard() {
   const listTitle = sel ? groups[sel].title : "Recent claims";
 
   const pendingStat = <Stat active={sel === "pending"} onClick={() => pick("pending")} icon={<Clock className="size-4 text-yellow-600" />} label="Pending HOD approval" value={String(by("pending").length)} sub={formatRM(sum(by("pending")))} />;
-  const cols = user.isSuper ? "lg:grid-cols-3 xl:grid-cols-6" : user.role === "salesman" ? "lg:grid-cols-5" : "lg:grid-cols-4";
+  const cols = user.isSuper ? "lg:grid-cols-5" : user.role === "salesman" ? "lg:grid-cols-5" : "lg:grid-cols-4";
 
   return (
     <>

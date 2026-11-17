@@ -152,3 +152,7 @@ export const getSalesperson = (list: Salesperson[], id: string) => list.find((s)
 /** A salesperson can change their own drafts and rejected claims; Admin and HOD change claims that are waiting or rejected. */
 export const canEditClaim = (user: User, claim: { status: Status }) =>
   user.canEdit && (user.role === "salesman" ? claim.status === "draft" || claim.status === "rejected" : claim.status === "pending" || claim.status === "rejected");
+
+/** Approved claims can be downloaded by anyone who can see them; Admin, HOD and Super Admin can download as soon as it is submitted. */
+export const canDownloadClaim = (user: User, claim: { status: Status }) =>
+  claim.status === "approved" || (user.role !== "salesman" && claim.status !== "draft");
