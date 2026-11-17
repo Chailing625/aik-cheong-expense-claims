@@ -176,9 +176,18 @@ export default function UsersPage() {
                     ) : a.role !== "admin" && a.role !== "hod" ? (
                       <span className="font-medium">{a.role ? ROLE_NAME[a.role] : "—"}{a.role === "salesman" && <span className="block text-xs font-normal text-gray-500">{salespeople.find((s) => s.id === a.salesperson_id)?.name}</span>}</span>
                     ) : (
-                      <select value={a.role ?? ""} onChange={(e) => void patch({ id: a.id, role: e.target.value })} className="rounded-md border bg-white px-2 py-1 text-sm">
+                      <select
+                        value={a.role ?? ""}
+                        onChange={(e) => {
+                          // a salesperson login must be linked to a name, so ask for it in the Edit window
+                          if (e.target.value === "salesman") { setEdit({ id: a.id, fullName: a.full_name, username: a.username ?? "", role: "salesman", salespersonId: a.salesperson_id ?? "", label: "" }); setEditError(""); }
+                          else void patch({ id: a.id, role: e.target.value });
+                        }}
+                        className="rounded-md border bg-white px-2 py-1 text-sm"
+                      >
                         <option value="admin">{ROLE_NAME.admin}</option>
                         <option value="hod">{ROLE_NAME.hod}</option>
+                        <option value="salesman">{ROLE_NAME.salesman}</option>
                       </select>
                     )}
                   </td>
