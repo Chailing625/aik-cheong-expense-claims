@@ -43,10 +43,10 @@ function ClaimDetail() {
     setError("");
     try {
       // every attachment (photos and PDF files), earliest first
-      const files: { blob: Blob; type: string }[] = [];
+      const files: { blob: Blob; type: string; note?: string }[] = [];
       for (const r of claim.receipts) {
         const blob = await getReceipt(r);
-        if (blob) files.push({ blob, type: r.type });
+        if (blob) files.push({ blob, type: r.type, note: r.note });
       }
       await downloadClaimPdf(exportRef.current, `Claim - ${sp?.name ?? "salesman"} - ${claim.period}.pdf`.replace(/[\\/:*?"<>|]/g, "-"), files);
     } catch {

@@ -6,6 +6,7 @@ export interface Receipt {
   name: string;
   type: string;
   path?: string; // location in storage (missing only for old sample data)
+  note?: string; // short note printed on this file when the claim is previewed or downloaded
 }
 
 const BUCKET = "receipts";

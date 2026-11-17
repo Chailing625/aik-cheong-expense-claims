@@ -170,10 +170,10 @@ export function ScaledPage({ children, width = 800 }: { children: React.ReactNod
 }
 
 /** Turns the form into an A4 PDF, adds every attachment after it in the given order (photos and PDF files), and downloads one file. */
-export async function downloadClaimPdf(el: HTMLElement, filename: string, attachments: { blob: Blob; type: string }[] = []) {
+export async function downloadClaimPdf(el: HTMLElement, filename: string, attachments: { blob: Blob; type: string; note?: string }[] = []) {
   const html2canvas = (await import("html2canvas-pro")).default;
   const { jsPDF } = await import("jspdf");
-  const { PDFDocument } = await import("pdf-lib");
+  const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
   const canvas = await html2canvas(el, { scale: 2, backgroundColor: "#ffffff" });
   const pdf = new jsPDF({ unit: "mm", format: "a4" });
   const pw = 210, ph = 297, m = 8;
@@ -187,18 +187,44 @@ export async function downloadClaimPdf(el: HTMLElement, filename: string, attach
 
   const out = await PDFDocument.load(pdf.output("arraybuffer"));
   const PW = 595.28, PH = 841.89, M = 23; // A4 in points
+  const font = await out.embedFont(StandardFonts.Helvetica);
+  // the standard font only has Western letters; anything else is shown as "?"
+  const clean = (t: string) => t.replace(/[\r\n\t]+/g, " ").replace(/[^\x20-\x7E\xA0-\xFF]/g, "?").trim();
+  const wrap = (text: string, size: number, width: number) => {
+    const lines: string[] = [];
+    let cur = "";
+    for (const word of clean(text).split(" ")) {
+      const next = cur ? `${cur} ${word}` : word;
+      if (cur && font.widthOfTextAtSize(next, size) > width) { lines.push(cur); cur = word; } else cur = next;
+    }
+    if (cur) lines.push(cur);
+    return lines;
+  };
+  /** Prints "Note: ..." in a white strip along the top of the page and returns the height used. */
+  const printNote = (page: ReturnType<typeof out.addPage>, note: string | undefined, size = 11) => {
+    if (!note || !clean(note)) return 0;
+    const lines = wrap(`Note: ${note}`, size, PW - 2 * M);
+    const h = lines.length * (size + 3) + 8;
+    const { height } = page.getSize();
+    page.drawRectangle({ x: 0, y: height - h - 6, width: PW, height: h + 6, color: rgb(1, 1, 1) });
+    lines.forEach((l, i) => page.drawText(l, { x: M, y: height - 6 - size - i * (size + 3), size, font, color: rgb(0, 0, 0) }));
+    return h + 6;
+  };
   for (const a of attachments) {
     const bytes = new Uint8Array(await a.blob.arrayBuffer());
     if (a.type === "application/pdf") {
       const src = await PDFDocument.load(bytes, { ignoreEncryption: true });
-      (await out.copyPages(src, src.getPageIndices())).forEach((p) => out.addPage(p));
+      const pages = await out.copyPages(src, src.getPageIndices());
+      pages.forEach((p, i) => { out.addPage(p); if (i === 0) printNote(p, a.note, 10); });
       continue;
     }
     const img = a.type === "image/png" ? await out.embedPng(bytes) : await out.embedJpg(bytes);
-    const scale = Math.min((PW - 2 * M) / img.width, (PH - 2 * M) / img.height);
-    const iw = img.width * scale, ih = img.height * scale;
     const page = out.addPage([PW, PH]);
-    page.drawImage(img, { x: (PW - iw) / 2, y: PH - M - ih, width: iw, height: ih });
+    const used = printNote(page, a.note);
+    const top = PH - M - used;
+    const scale = Math.min((PW - 2 * M) / img.width, (top - M) / img.height);
+    const iw = img.width * scale, ih = img.height * scale;
+    page.drawImage(img, { x: (PW - iw) / 2, y: top - ih, width: iw, height: ih });
   }
 
   const blob = new Blob([new Uint8Array(await out.save())], { type: "application/pdf" });

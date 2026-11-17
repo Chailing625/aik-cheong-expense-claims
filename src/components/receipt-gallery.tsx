@@ -4,7 +4,7 @@ import { FileText, X } from "lucide-react";
 import { getReceipt, type Receipt } from "@/lib/receipts";
 
 /** Shows each attached receipt as a thumbnail. Click to view it full size. */
-export function ReceiptGallery({ receipts, onRemove }: { receipts: Receipt[]; onRemove?: (id: string) => void }) {
+export function ReceiptGallery({ receipts, onRemove, onNoteChange }: { receipts: Receipt[]; onRemove?: (id: string) => void; onNoteChange?: (id: string, note: string) => void }) {
   const [urls, setUrls] = useState<Record<string, string | null>>({});
   const [open, setOpen] = useState<Receipt | null>(null);
   const key = receipts.map((r) => r.id).join("|");
@@ -58,6 +58,11 @@ export function ReceiptGallery({ receipts, onRemove }: { receipts: Receipt[]; on
                 </div>
               )}
               <div className="truncate border-t bg-white px-2 py-1 text-[11px] text-gray-600">{r.name}</div>
+              {onNoteChange ? (
+                <input value={r.note ?? ""} maxLength={200} onChange={(e) => onNoteChange(r.id, e.target.value)} placeholder="Note to print on this file" className="w-full border-t bg-white px-2 py-1 text-[11px] outline-none focus:bg-blue-50" />
+              ) : r.note ? (
+                <div className="border-t bg-yellow-50 px-2 py-1 text-[11px] text-gray-700">{r.note}</div>
+              ) : null}
               {onRemove && (
                 <button aria-label="Remove" onClick={() => onRemove(r.id)} className="absolute right-1 top-1 rounded-full bg-white/90 p-1 shadow">
                   <X className="size-3.5" />
@@ -115,6 +120,7 @@ export function AttachmentPages({ receipts }: { receipts: Receipt[] }) {
         return (
           <div key={r.id} className="overflow-hidden rounded-lg border bg-white shadow-sm">
             <div className="border-b bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-600">Attachment {i + 1} of {receipts.length} · {r.name}</div>
+            {r.note && <div className="border-b bg-yellow-50 px-3 py-2 text-sm text-gray-900"><b>Note:</b> {r.note}</div>}
             {url ? (
               r.type.startsWith("image/") ? (
                 // eslint-disable-next-line @next/next/no-img-element

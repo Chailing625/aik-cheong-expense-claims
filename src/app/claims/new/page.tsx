@@ -267,7 +267,7 @@ function ClaimEditor() {
                 <input type="file" multiple accept="image/*,application/pdf" capture="environment" className="sr-only"
                   onChange={async (e) => { const files = Array.from(e.target.files ?? []); e.target.value = ""; setUploading(true); try { const added = await saveFiles(files, user.id); setReceipts((l) => [...l, ...added]); } catch (err) { setErrors([(err as Error).message]); } finally { setUploading(false); } }} />
               </label>
-              <div className="mt-2"><ReceiptGallery receipts={receipts} onRemove={(id) => setReceipts((l) => l.filter((r) => r.id !== id))} /></div>
+              <div className="mt-2"><ReceiptGallery receipts={receipts} onRemove={(id) => setReceipts((l) => l.filter((r) => r.id !== id))} onNoteChange={(id, note) => setReceipts((l) => l.map((r) => (r.id === id ? { ...r, note } : r)))} /></div>
             </div>
           </section>
 

@@ -133,6 +133,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          note: string
           storage_path: string
           type: string
         }
@@ -141,6 +142,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          note?: string
           storage_path: string
           type: string
         }
@@ -149,6 +151,7 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          note?: string
           storage_path?: string
           type?: string
         }
