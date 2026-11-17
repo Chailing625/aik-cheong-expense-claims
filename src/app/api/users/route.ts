@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
-const ROLES = ["admin", "hod"] as const;
+const ROLES = ["admin", "hod", "salesman"] as const;
 type AppRole = (typeof ROLES)[number];
 
 /** Only a signed-in, active super admin may use these endpoints. */
@@ -16,6 +16,18 @@ async function requireSuperAdmin(request: Request) {
 
 const bad = (message: string, status = 400) => NextResponse.json({ error: message }, { status });
 
+/** A salesperson login must be linked to a name on the Sales Person list, and each name can have only one login. */
+async function checkSalesperson(salespersonId: string | undefined, exceptAccount?: string): Promise<{ id: string } | { error: string }> {
+  if (!salespersonId) return { error: "Choose which sales person this login is for." };
+  const sp = await supabaseAdmin.from("salespeople").select("id").eq("id", salespersonId).maybeSingle();
+  if (!sp.data) return { error: "That sales person was not found." };
+  let q = supabaseAdmin.from("profiles").select("id").eq("salesperson_id", salespersonId);
+  if (exceptAccount) q = q.neq("id", exceptAccount);
+  const used = await q.maybeSingle();
+  if (used.data) return { error: "That sales person already has a login." };
+  return { id: salespersonId };
+}
+
 /** Tick boxes: editing or deleting needs viewing, so View is switched on for them. */
 function cleanPerms(p: { can_view?: unknown; can_edit?: unknown; can_delete?: unknown }) {
   const out: { can_view?: boolean; can_edit?: boolean; can_delete?: boolean } = {};
@@ -28,7 +40,7 @@ function cleanPerms(p: { can_view?: unknown; can_edit?: unknown; can_delete?: un
 
 export async function GET(request: Request) {
   if (!(await requireSuperAdmin(request))) return bad("Not allowed", 403);
-  const { data, error } = await supabaseAdmin.from("profiles").select("id, username, full_name, role, active, created_at, can_view, can_edit, can_delete").order("created_at");
+  const { data, error } = await supabaseAdmin.from("profiles").select("id, username, full_name, role, active, created_at, can_view, can_edit, can_delete, salesperson_id").order("created_at");
   if (error) return bad(error.message, 500);
   return NextResponse.json({ users: data });
 }
@@ -36,7 +48,7 @@ export async function GET(request: Request) {
 /** Create a staff account. Body: { id, fullName, role, password }. The ID is what they sign in with. */
 export async function POST(request: Request) {
   if (!(await requireSuperAdmin(request))) return bad("Not allowed", 403);
-  const body = (await request.json().catch(() => null)) as { id?: string; fullName?: string; role?: string; password?: string; can_view?: boolean; can_edit?: boolean; can_delete?: boolean } | null;
+  const body = (await request.json().catch(() => null)) as { id?: string; fullName?: string; role?: string; password?: string; salespersonId?: string; can_view?: boolean; can_edit?: boolean; can_delete?: boolean } | null;
   const username = body?.id?.trim().toLowerCase() ?? "";
   const email = `${username}@aikcheong.my`; // internal only; staff never type it
   const fullName = body?.fullName?.trim() ?? "";
@@ -46,7 +58,9 @@ export async function POST(request: Request) {
   const taken = await supabaseAdmin.from("profiles").select("id").eq("username", username).maybeSingle();
   if (taken.data) return bad("That ID is already used. Choose another one.");
   if (!fullName) return bad("Enter the person's name.");
-  if (!ROLES.includes(role)) return bad("Choose Admin or HOD.");
+  if (!ROLES.includes(role)) return bad("Choose Admin, HOD or Salesperson.");
+  const link = role === "salesman" ? await checkSalesperson(body?.salespersonId) : { id: null };
+  if ("error" in link) return bad(link.error);
   if (password.length < 8) return bad("The password must be at least 8 characters.");
 
   const created = await supabaseAdmin.auth.admin.createUser({
@@ -55,8 +69,8 @@ export async function POST(request: Request) {
   });
   if (created.error || !created.data.user) return bad(created.error?.message ?? "Could not create the account.", 400);
 
-  const perms = { can_view: true, can_edit: role === "admin", can_delete: false, ...cleanPerms(body ?? {}) };
-  const { error } = await supabaseAdmin.from("profiles").update({ role, full_name: fullName, active: true, username, ...perms }).eq("id", created.data.user.id);
+  const perms = { can_view: true, can_edit: role === "admin" || role === "salesman", can_delete: false, ...cleanPerms(body ?? {}) };
+  const { error } = await supabaseAdmin.from("profiles").update({ role, full_name: fullName, active: true, username, salesperson_id: link.id, ...perms }).eq("id", created.data.user.id);
   if (error) return bad(error.message, 500);
   return NextResponse.json({ id: created.data.user.id });
 }
@@ -65,13 +79,13 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   const me = await requireSuperAdmin(request);
   if (!me) return bad("Not allowed", 403);
-  const body = (await request.json().catch(() => null)) as { id?: string; role?: string; active?: boolean; password?: string; fullName?: string; username?: string; can_view?: boolean; can_edit?: boolean; can_delete?: boolean } | null;
+  const body = (await request.json().catch(() => null)) as { id?: string; role?: string; active?: boolean; password?: string; fullName?: string; username?: string; salespersonId?: string; can_view?: boolean; can_edit?: boolean; can_delete?: boolean } | null;
   if (!body?.id) return bad("Missing account.");
   const { data: target } = await supabaseAdmin.from("profiles").select("role").eq("id", body.id).maybeSingle();
   if (!target) return bad("Account not found.", 404);
   if (target.role === "superadmin") return bad("The super admin account cannot be changed here.", 403);
 
-  const update: { role?: string; active?: boolean; full_name?: string; username?: string; email?: string; can_view?: boolean; can_edit?: boolean; can_delete?: boolean } = { ...cleanPerms(body) };
+  const update: { role?: string; active?: boolean; full_name?: string; username?: string; email?: string; salesperson_id?: string | null; can_view?: boolean; can_edit?: boolean; can_delete?: boolean } = { ...cleanPerms(body) };
   if (body.can_view === false) {
     // View off also switches off Edit and Delete, since they cannot work without it.
     update.can_view = false;
@@ -79,9 +93,20 @@ export async function PATCH(request: Request) {
     update.can_delete = false;
   }
   if (body.role !== undefined) {
-    if (target.role !== "admin" && target.role !== "hod") return bad("This kind of account keeps its role.");
-    if (!ROLES.includes(body.role as AppRole)) return bad("Choose Admin or HOD.");
+    if (target.role !== "admin" && target.role !== "hod" && target.role !== "salesman") return bad("This kind of account keeps its role.");
+    if (!ROLES.includes(body.role as AppRole)) return bad("Choose Admin, HOD or Salesperson.");
     update.role = body.role;
+    if (body.role === "salesman") {
+      const link = await checkSalesperson(body.salespersonId, body.id);
+      if ("error" in link) return bad(link.error);
+      update.salesperson_id = link.id;
+      update.can_view = true; // a salesperson must be able to see and key in their own claims
+      update.can_edit = true;
+    } else update.salesperson_id = null;
+  } else if (body.salespersonId !== undefined && target.role === "salesman") {
+    const link = await checkSalesperson(body.salespersonId, body.id);
+    if ("error" in link) return bad(link.error);
+    update.salesperson_id = link.id;
   }
   if (body.fullName !== undefined) {
     if (!body.fullName.trim()) return bad("Enter the person's name.");

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Check, Copy, KeyRound, Lock, Pencil, Plus, Trash2, UserCheck, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
+import { useStore } from "@/lib/store";
 import { useUser } from "@/lib/user-context";
 
 interface Account {
@@ -14,6 +15,7 @@ interface Account {
   can_view: boolean;
   can_edit: boolean;
   can_delete: boolean;
+  salesperson_id: string | null;
 }
 
 const PERMS = [
@@ -22,6 +24,7 @@ const PERMS = [
   { key: "can_delete", label: "Delete" },
 ] as const;
 
+const ROLE_CHOICE = { admin: "Admin (key in claims)", hod: "HOD (approves)", salesman: "Salesperson (own claims only)" } as const;
 const ROLE_NAME = { superadmin: "Super Admin", admin: "Admin (key in claims)", hod: "HOD (approves)", salesman: "Salesperson", manager: "Sales Manager" } as const;
 const inp = "w-full rounded-lg border bg-white px-3 py-2.5 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm";
 
@@ -49,10 +52,11 @@ export default function UsersPage() {
   const [list, setList] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [form, setForm] = useState<null | { fullName: string; id: string; role: "admin" | "hod"; password: string }>(null);
+  const { salespeople } = useStore();
+  const [form, setForm] = useState<null | { fullName: string; id: string; role: "admin" | "hod" | "salesman"; salespersonId: string; password: string }>(null);
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [edit, setEdit] = useState<null | { id: string; fullName: string; username: string; role: "admin" | "hod" | null; label: string }>(null);
+  const [edit, setEdit] = useState<null | { id: string; fullName: string; username: string; role: "admin" | "hod" | "salesman" | null; salespersonId: string; label: string }>(null);
   const [editError, setEditError] = useState("");
   const [reveal, setReveal] = useState<null | { title: string; id: string; password: string }>(null);
   const [copied, setCopied] = useState(false);
@@ -112,7 +116,7 @@ export default function UsersPage() {
     setBusy(true);
     setEditError("");
     try {
-      await call("PATCH", { id: edit.id, fullName: edit.fullName, username: edit.username, ...(edit.role ? { role: edit.role } : {}) });
+      await call("PATCH", { id: edit.id, fullName: edit.fullName, username: edit.username, ...(edit.role ? { role: edit.role } : {}), ...(edit.role === "salesman" ? { salespersonId: edit.salespersonId } : {}) });
       setEdit(null);
       await load();
     } catch (e) {
@@ -147,7 +151,7 @@ export default function UsersPage() {
           <h1 className="text-2xl font-bold text-gray-900">Staff Accounts</h1>
           <p className="mt-1 text-sm text-gray-500">Staff cannot sign themselves up. Create their account here, then tick what each person may do with claims. Edit and Delete only work on claims not yet approved. Approving stays with the HOD.</p>
         </div>
-        <Button className="gap-2" onClick={() => { setForm({ fullName: "", id: "", role: "admin", password: makePassword() }); setFormError(""); }}>
+        <Button className="gap-2" onClick={() => { setForm({ fullName: "", id: "", role: "admin", salespersonId: "", password: makePassword() }); setFormError(""); }}>
           <Plus className="size-4" /> Add staff account
         </Button>
       </div>
@@ -170,7 +174,7 @@ export default function UsersPage() {
                     {isSuper ? (
                       <span className="font-medium">Super Admin</span>
                     ) : a.role !== "admin" && a.role !== "hod" ? (
-                      <span className="font-medium">{a.role ? ROLE_NAME[a.role] : "—"}</span>
+                      <span className="font-medium">{a.role ? ROLE_NAME[a.role] : "—"}{a.role === "salesman" && <span className="block text-xs font-normal text-gray-500">{salespeople.find((s) => s.id === a.salesperson_id)?.name}</span>}</span>
                     ) : (
                       <select value={a.role ?? ""} onChange={(e) => void patch({ id: a.id, role: e.target.value })} className="rounded-md border bg-white px-2 py-1 text-sm">
                         <option value="admin">{ROLE_NAME.admin}</option>
@@ -196,7 +200,7 @@ export default function UsersPage() {
                   <td className="px-4 py-3">
                     {!isSuper && (
                       <div className="flex justify-end gap-1.5">
-                        <Button size="sm" variant="outline" className="gap-1" onClick={() => { setEdit({ id: a.id, fullName: a.full_name, username: a.username ?? "", role: a.role === "admin" || a.role === "hod" ? a.role : null, label: a.role ? ROLE_NAME[a.role] : "" }); setEditError(""); }}>
+                        <Button size="sm" variant="outline" className="gap-1" onClick={() => { setEdit({ id: a.id, fullName: a.full_name, username: a.username ?? "", role: a.role === "admin" || a.role === "hod" || a.role === "salesman" ? a.role : null, salespersonId: a.salesperson_id ?? "", label: a.role ? ROLE_NAME[a.role] : "" }); setEditError(""); }}>
                           <Pencil className="size-3.5" /> Edit
                         </Button>
                         <Button size="sm" variant="outline" className="gap-1" onClick={() => { const pw = makePassword(); if (confirm(`Set a new temporary password for ${a.full_name || a.username}? They must change it at next sign-in.`)) void patch({ id: a.id, password: pw }, { id: a.username ?? "", password: pw }); }}>
@@ -235,11 +239,22 @@ export default function UsersPage() {
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">Role</label>
-                <select className={inp} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as "admin" | "hod" })}>
-                  <option value="admin">{ROLE_NAME.admin}</option>
-                  <option value="hod">{ROLE_NAME.hod}</option>
+                <select className={inp} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as "admin" | "hod" | "salesman" })}>
+                  <option value="admin">{ROLE_CHOICE.admin}</option>
+                  <option value="hod">{ROLE_CHOICE.hod}</option>
+                  <option value="salesman">{ROLE_CHOICE.salesman}</option>
                 </select>
               </div>
+              {form.role === "salesman" && (
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Which sales person is this?</label>
+                  <select className={inp} value={form.salespersonId} onChange={(e) => setForm({ ...form, salespersonId: e.target.value })}>
+                    <option value="">Choose a sales person…</option>
+                    {salespeople.filter((s) => !s.suspended).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">Their claims, name and bank details come from this person on the Sales Person list.</p>
+                </div>
+              )}
               <div>
                 <label className="mb-1 block text-sm font-medium">Temporary password</label>
                 <div className="flex gap-2">
@@ -252,7 +267,7 @@ export default function UsersPage() {
             {formError && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</p>}
             <div className="mt-5 flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setForm(null)}>Cancel</Button>
-              <Button className="flex-1" disabled={busy} onClick={create}>{busy ? "Creating…" : "Create account"}</Button>
+              <Button className="flex-1" disabled={busy || (form.role === "salesman" && !form.salespersonId)} onClick={create}>{busy ? "Creating…" : "Create account"}</Button>
             </div>
           </div>
         </div>
@@ -275,19 +290,29 @@ export default function UsersPage() {
               <div>
                 <label className="mb-1 block text-sm font-medium">Role</label>
                 {edit.role ? (
-                  <select className={inp} value={edit.role} onChange={(e) => setEdit({ ...edit, role: e.target.value as "admin" | "hod" })}>
-                    <option value="admin">{ROLE_NAME.admin}</option>
-                    <option value="hod">{ROLE_NAME.hod}</option>
+                  <select className={inp} value={edit.role} onChange={(e) => setEdit({ ...edit, role: e.target.value as "admin" | "hod" | "salesman" })}>
+                    <option value="admin">{ROLE_CHOICE.admin}</option>
+                    <option value="hod">{ROLE_CHOICE.hod}</option>
+                    <option value="salesman">{ROLE_CHOICE.salesman}</option>
                   </select>
                 ) : (
                   <p className="rounded-lg bg-gray-50 px-3 py-2.5 text-sm text-gray-700">{edit.label}</p>
                 )}
               </div>
+              {edit.role === "salesman" && (
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Which sales person is this?</label>
+                  <select className={inp} value={edit.salespersonId} onChange={(e) => setEdit({ ...edit, salespersonId: e.target.value })}>
+                    <option value="">Choose a sales person…</option>
+                    {salespeople.filter((s) => !s.suspended || s.id === edit.salespersonId).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+              )}
             </div>
             {editError && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{editError}</p>}
             <div className="mt-5 flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setEdit(null)}>Cancel</Button>
-              <Button className="flex-1" disabled={busy || !edit.fullName.trim()} onClick={saveEdit}>{busy ? "Saving…" : "Save"}</Button>
+              <Button className="flex-1" disabled={busy || !edit.fullName.trim() || (edit.role === "salesman" && !edit.salespersonId)} onClick={saveEdit}>{busy ? "Saving…" : "Save"}</Button>
             </div>
           </div>
         </div>

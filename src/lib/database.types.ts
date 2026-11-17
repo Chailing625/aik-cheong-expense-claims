@@ -254,6 +254,7 @@ export type Database = {
           full_name?: string
           id: string
           role?: string | null
+          salesperson_id?: string | null
           username?: string | null
         }
         Update: {
@@ -266,6 +267,7 @@ export type Database = {
           full_name?: string
           id?: string
           role?: string | null
+          salesperson_id?: string | null
           username?: string | null
         }
         Relationships: []
