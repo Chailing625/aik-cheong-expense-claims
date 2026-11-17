@@ -113,7 +113,7 @@ export function ClaimForm({ data, watermark }: { data: FormData; watermark?: str
           </tr>
           <tr>
             <td colSpan={6} style={{ ...cellBase, height: 54, textAlign: "left", verticalAlign: "top", padding: 4, fontSize: 9.5, whiteSpace: "pre-wrap" }}>
-              <b>NOTES:</b> {data.notes}
+              <b>NOTES:</b>
             </td>
             <td style={{ ...cellBase, textAlign: "left", fontWeight: 700, fontSize: 9.5, lineHeight: 1.3 }}>GRAND<br />TOTAL (RM):</td>
             <td colSpan={2} style={{ ...cellBase, fontWeight: 800, fontSize: 13 }}>{money(t.grand)}</td>

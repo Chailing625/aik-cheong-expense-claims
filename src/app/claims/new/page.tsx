@@ -255,11 +255,7 @@ function ClaimEditor() {
             </div>
           </section>
 
-          <section className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-xl border bg-white p-4">
-              <label className="mb-1 block text-sm font-semibold text-gray-900">Notes</label>
-              <textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Explain Others (e.g. 20th: sample delivery RM7) ..." className={inp} />
-            </div>
+          <section className="grid gap-4">
             <div className="rounded-xl border bg-white p-4">
               <label className="mb-1 block text-sm font-semibold text-gray-900">Receipts / bills</label>
               <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed py-3 text-sm text-gray-600 hover:border-primary hover:text-primary">
