@@ -120,7 +120,6 @@ export function AttachmentPages({ receipts }: { receipts: Receipt[] }) {
         return (
           <div key={r.id} className="overflow-hidden rounded-lg border bg-white shadow-sm">
             <div className="border-b bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-600">Attachment {i + 1} of {receipts.length} · {r.name}</div>
-            {r.note && <div className="border-b bg-yellow-50 px-3 py-2 text-sm text-gray-900"><b>Note:</b> {r.note}</div>}
             {url ? (
               r.type.startsWith("image/") ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -131,6 +130,7 @@ export function AttachmentPages({ receipts }: { receipts: Receipt[] }) {
             ) : (
               <div className="p-8 text-center text-sm text-gray-400">{url === undefined ? "Loading…" : "Sample file – no image stored"}</div>
             )}
+            {r.note && <div className="border-t bg-white px-3 py-2 text-left text-sm text-gray-900"><b>Note:</b> {r.note}</div>}
           </div>
         );
       })}

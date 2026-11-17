@@ -200,14 +200,13 @@ export async function downloadClaimPdf(el: HTMLElement, filename: string, attach
     if (cur) lines.push(cur);
     return lines;
   };
-  /** Prints "Note: ..." in a white strip along the top of the page and returns the height used. */
+  /** Prints "Note: ..." at the bottom left of the page, in a white strip, and returns the height used. */
   const printNote = (page: ReturnType<typeof out.addPage>, note: string | undefined, size = 11) => {
     if (!note || !clean(note)) return 0;
     const lines = wrap(`Note: ${note}`, size, PW - 2 * M);
     const h = lines.length * (size + 3) + 8;
-    const { height } = page.getSize();
-    page.drawRectangle({ x: 0, y: height - h - 6, width: PW, height: h + 6, color: rgb(1, 1, 1) });
-    lines.forEach((l, i) => page.drawText(l, { x: M, y: height - 6 - size - i * (size + 3), size, font, color: rgb(0, 0, 0) }));
+    page.drawRectangle({ x: 0, y: 0, width: PW, height: h + 6, color: rgb(1, 1, 1) });
+    lines.forEach((l, i) => page.drawText(l, { x: M, y: h - size - i * (size + 3) + 2, size, font, color: rgb(0, 0, 0) }));
     return h + 6;
   };
   for (const a of attachments) {
@@ -221,8 +220,8 @@ export async function downloadClaimPdf(el: HTMLElement, filename: string, attach
     const img = a.type === "image/png" ? await out.embedPng(bytes) : await out.embedJpg(bytes);
     const page = out.addPage([PW, PH]);
     const used = printNote(page, a.note);
-    const top = PH - M - used;
-    const scale = Math.min((PW - 2 * M) / img.width, (top - M) / img.height);
+    const top = PH - M;
+    const scale = Math.min((PW - 2 * M) / img.width, (top - Math.max(M, used + 8)) / img.height);
     const iw = img.width * scale, ih = img.height * scale;
     page.drawImage(img, { x: (PW - iw) / 2, y: top - ih, width: iw, height: ih });
   }
