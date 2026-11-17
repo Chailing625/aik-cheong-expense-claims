@@ -174,7 +174,7 @@ export default function UsersPage() {
                     {isSuper ? (
                       <span className="font-medium">Super Admin</span>
                     ) : a.role !== "admin" && a.role !== "hod" ? (
-                      <span className="font-medium">{a.role ? ROLE_NAME[a.role] : "—"}{a.role === "salesman" && <span className="block text-xs font-normal text-gray-500">{salespeople.find((s) => s.id === a.salesperson_id)?.name}</span>}</span>
+                      <span className="font-medium">{a.role ? ROLE_NAME[a.role] : "—"}</span>
                     ) : (
                       <select
                         value={a.role ?? ""}
