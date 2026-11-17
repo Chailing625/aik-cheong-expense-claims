@@ -39,7 +39,7 @@ export default function Dashboard() {
     pending: { title: "Pending HOD approval", list: by("pending") },
     approved: { title: "Approved claims", list: by("approved") },
     rejected: { title: "Rejected claims", list: by("rejected") },
-    range: { title: `Total claim (approved) · claim period ${isThisMonth ? "this month" : `${formatDate(from)} to ${formatDate(to)}`}`, list: [...approvedRange].sort(byPeriod) },
+    range: { title: `Total approved claim · claim period ${isThisMonth ? "this month" : `${formatDate(from)} to ${formatDate(to)}`}`, list: [...approvedRange].sort(byPeriod) },
   };
   const shown = sel
     ? groups[sel].list
@@ -87,7 +87,7 @@ export default function Dashboard() {
         {pendingStat}
         <Stat active={sel === "approved"} onClick={() => pick("approved")} icon={<CheckCircle2 className="size-4 text-green-600" />} label="Approved (ready to download)" value={String(by("approved").length)} sub={formatRM(sum(by("approved")))} />
         <Stat active={sel === "rejected"} onClick={() => pick("rejected")} icon={<XCircle className="size-4 text-red-600" />} label="Rejected (needs fixing)" value={String(by("rejected").length)} sub={formatRM(sum(by("rejected")))} />
-        <Stat active={sel === "range"} onClick={() => pick("range")} icon={<Download className="size-4 text-primary" />} label={isThisMonth ? "Total claim (this month)" : "Total claim (chosen dates)"} value={formatRM(sum(approvedRange))} sub={`${approvedRange.length} approved claim${approvedRange.length === 1 ? "" : "s"} by claim period`}>
+        <Stat active={sel === "range"} onClick={() => pick("range")} icon={<Download className="size-4 text-primary" />} label={isThisMonth ? "Total approved claim (this month)" : "Total approved claim (chosen dates)"} value={formatRM(sum(approvedRange))} sub={`${approvedRange.length} approved claim${approvedRange.length === 1 ? "" : "s"} by claim period`}>
           <div className="mt-2 space-y-1 text-[11px] text-gray-500" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
             <label className="flex items-center justify-between gap-1">From <input type="date" value={from} max={to} onChange={(e) => e.target.value && setFrom(e.target.value)} className="w-[8.5rem] rounded border bg-white px-1 py-0.5 text-xs text-gray-800" /></label>
             <label className="flex items-center justify-between gap-1">To <input type="date" value={to} min={from} onChange={(e) => e.target.value && setTo(e.target.value)} className="w-[8.5rem] rounded border bg-white px-1 py-0.5 text-xs text-gray-800" /></label>
